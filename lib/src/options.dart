@@ -86,6 +86,8 @@ class RoomOptions {
   /// Defaults to true.
   final bool stopLocalTrackOnUnpublish;
 
+  final bool asCallChatSession;
+
   const RoomOptions({
     this.defaultCameraCaptureOptions = const CameraCaptureOptions(),
     this.defaultScreenShareCaptureOptions = const ScreenShareCaptureOptions(),
@@ -95,6 +97,7 @@ class RoomOptions {
     this.adaptiveStream = false,
     this.dynacast = false,
     this.stopLocalTrackOnUnpublish = true,
+    this.asCallChatSession = false,
   });
 }
 

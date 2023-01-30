@@ -87,7 +87,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
     addTrackPublication(pub);
 
     // did publish
-    await track.onPublish();
+    await track.onPublish(room.roomOptions.asCallChatSession);
 
     [events, room.events].emit(LocalTrackPublishedEvent(
       participant: this,

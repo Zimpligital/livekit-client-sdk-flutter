@@ -15,7 +15,7 @@ enum AudioTrackState {
 }
 
 typedef ConfigureNativeAudioFunc = Future<NativeAudioConfiguration> Function(
-    AudioTrackState state);
+    AudioTrackState state, bool asCallChatSession);
 
 // it's possible to set custom function here to customize audio session configuration
 ConfigureNativeAudioFunc onConfigureNativeAudio =
@@ -23,13 +23,17 @@ ConfigureNativeAudioFunc onConfigureNativeAudio =
 
 final _trackCounterLock = sync.Lock();
 AudioTrackState _audioTrackState = AudioTrackState.none;
+bool _asCallChatSession = false;
 int _localTrackCount = 0;
 int _remoteTrackCount = 0;
 
 mixin LocalAudioManagementMixin on LocalTrack, AudioTrack {
   @override
-  Future<bool> onPublish() async {
+  Future<bool> onPublish([bool? asCallChatSession]) async {
     final didUpdate = await super.onPublish();
+    if(asCallChatSession != null){
+      _asCallChatSession = asCallChatSession;
+    }
     if (didUpdate) {
       // update counter
       await _trackCounterLock.synchronized(() async {
@@ -94,7 +98,7 @@ Future<void> _onAudioTrackCountDidChange() async {
     NativeAudioConfiguration? config;
     if (lkPlatformIs(PlatformType.iOS)) {
       // Only iOS for now...
-      config = await onConfigureNativeAudio.call(_audioTrackState);
+      config = await onConfigureNativeAudio.call(_audioTrackState, _asCallChatSession);
     }
 
     if (config != null) {
@@ -121,7 +125,7 @@ AudioTrackState _computeAudioTrackState() {
 }
 
 Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
-    AudioTrackState state) async {
+    AudioTrackState state, bool asCallChatSession) async {
   //
   if (state == AudioTrackState.remoteOnly) {
     return NativeAudioConfiguration(
@@ -134,7 +138,7 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
   } else if ([
     AudioTrackState.localOnly,
     AudioTrackState.localAndRemote,
-  ].contains(state)) {
+  ].contains(state) && !asCallChatSession) {
     return NativeAudioConfiguration(
       appleAudioCategory: AppleAudioCategory.playAndRecord,
       appleAudioCategoryOptions: {
@@ -146,7 +150,7 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
   }
 
   return NativeAudioConfiguration(
-    appleAudioCategory: AppleAudioCategory.soloAmbient,
+    appleAudioCategory: AppleAudioCategory.playAndRecord,
     appleAudioCategoryOptions: {},
     appleAudioMode: AppleAudioMode.default_,
   );
