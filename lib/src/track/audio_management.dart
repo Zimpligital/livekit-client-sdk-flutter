@@ -129,11 +129,11 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
   //
   if (state == AudioTrackState.remoteOnly) {
     return NativeAudioConfiguration(
-      appleAudioCategory: AppleAudioCategory.playback,
+      appleAudioCategory: AppleAudioCategory.playAndRecord,
       appleAudioCategoryOptions: {
         AppleAudioCategoryOption.mixWithOthers,
       },
-      appleAudioMode: AppleAudioMode.spokenAudio,
+      appleAudioMode: AppleAudioMode.default_,
     );
   } else if ([
     AudioTrackState.localOnly,
