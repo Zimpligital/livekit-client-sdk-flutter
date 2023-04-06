@@ -54,12 +54,22 @@ class _RoomPageState extends State<RoomPage> {
   }
 
   void _setUpListeners() => _listener
-    ..on<RoomDisconnectedEvent>((_) async {
+    ..on<RoomDisconnectedEvent>((event) async {
+      if (event.reason != null) {
+        print('Room disconnected: reason => ${event.reason}');
+      }
       WidgetsBindingCompatible.instance
           ?.addPostFrameCallback((timeStamp) => Navigator.pop(context));
     })
+    ..on<RoomRecordingStatusChanged>((event) {
+      context.showRecordingStatusChangedDialog(event.activeRecording);
+    })
     ..on<LocalTrackPublishedEvent>((_) => _sortParticipants())
     ..on<LocalTrackUnpublishedEvent>((_) => _sortParticipants())
+    ..on<ParticipantNameUpdatedEvent>((event) {
+      print(
+          'Participant name updated: ${event.participant.identity}, name => ${event.name}');
+    })
     ..on<DataReceivedEvent>((event) {
       String decoded = 'Failed to decode';
       try {
