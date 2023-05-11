@@ -1,5 +1,6 @@
 import 'constants.dart';
 import 'core/room.dart';
+import 'e2ee/options.dart';
 import 'publication/remote.dart';
 import 'track/local/audio.dart';
 import 'track/local/video.dart';
@@ -44,7 +45,7 @@ class ConnectOptions {
   const ConnectOptions({
     this.autoSubscribe = true,
     this.rtcConfiguration = const RTCConfiguration(),
-    this.protocolVersion = ProtocolVersion.v8,
+    this.protocolVersion = ProtocolVersion.v9,
     this.timeouts = Timeouts.defaultTimeouts,
   });
 }
@@ -90,6 +91,9 @@ class RoomOptions {
 
   final bool asCallChatSession;
 
+  /// Options for end-to-end encryption.
+  final E2EEOptions? e2eeOptions;
+
   const RoomOptions({
     this.defaultCameraCaptureOptions = const CameraCaptureOptions(),
     this.defaultScreenShareCaptureOptions = const ScreenShareCaptureOptions(),
@@ -101,6 +105,7 @@ class RoomOptions {
     this.dynacast = false,
     this.stopLocalTrackOnUnpublish = true,
     this.asCallChatSession = false,
+    this.e2eeOptions,
   });
 
   RoomOptions copyWith({
@@ -137,6 +142,9 @@ class RoomOptions {
 
 /// Options used when publishing video.
 class VideoPublishOptions {
+  /// The video codec to use.
+  final String videoCodec;
+
   /// If provided, this will be used instead of the SDK's suggested encodings.
   /// Usually you don't need to provide this.
   /// Defaults to null.
@@ -152,11 +160,26 @@ class VideoPublishOptions {
   final List<VideoParameters> screenShareSimulcastLayers;
 
   const VideoPublishOptions({
+    this.videoCodec = 'H264',
     this.videoEncoding,
     this.simulcast = true,
     this.videoSimulcastLayers = const [],
     this.screenShareSimulcastLayers = const [],
   });
+
+  VideoPublishOptions copyWith({
+    VideoEncoding? videoEncoding,
+    bool? simulcast,
+    List<VideoParameters>? videoSimulcastLayers,
+    List<VideoParameters>? screenShareSimulcastLayers,
+  }) =>
+      VideoPublishOptions(
+        videoEncoding: videoEncoding ?? this.videoEncoding,
+        simulcast: simulcast ?? this.simulcast,
+        videoSimulcastLayers: videoSimulcastLayers ?? this.videoSimulcastLayers,
+        screenShareSimulcastLayers:
+            screenShareSimulcastLayers ?? this.screenShareSimulcastLayers,
+      );
 
   @override
   String toString() =>
