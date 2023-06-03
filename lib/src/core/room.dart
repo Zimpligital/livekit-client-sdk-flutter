@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:livekit_client/src/hardware/hardware.dart';
-import 'package:livekit_client/src/support/app_state.dart';
+
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
 import '../core/signal_client.dart';
@@ -11,6 +10,7 @@ import '../e2ee/e2ee_manager.dart';
 import '../events.dart';
 import '../exceptions.dart';
 import '../extensions.dart';
+import '../hardware/hardware.dart';
 import '../internal/events.dart';
 import '../logger.dart';
 import '../managers/event.dart';
@@ -20,6 +20,7 @@ import '../participant/participant.dart';
 import '../participant/remote.dart';
 import '../proto/livekit_models.pb.dart' as lk_models;
 import '../proto/livekit_rtc.pb.dart' as lk_rtc;
+import '../support/app_state.dart';
 import '../support/disposable.dart';
 import '../support/platform.dart';
 import '../track/local/audio.dart';
@@ -200,30 +201,35 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         var audio = options.microphone;
         if (audio.enabled != null && audio.enabled == true) {
           if (audio.track != null) {
-            _localParticipant!
-                .publishAudioTrack(audio.track as LocalAudioTrack);
+            _localParticipant!.publishAudioTrack(audio.track as LocalAudioTrack,
+                publishOptions: roomOptions.defaultAudioPublishOptions);
           } else {
-            _localParticipant!.setMicrophoneEnabled(true);
+            _localParticipant!.setMicrophoneEnabled(true,
+                audioCaptureOptions: roomOptions.defaultAudioCaptureOptions);
           }
         }
 
         var video = options.camera;
         if (video.enabled != null && video.enabled == true) {
           if (video.track != null) {
-            _localParticipant!
-                .publishVideoTrack(video.track as LocalVideoTrack);
+            _localParticipant!.publishVideoTrack(video.track as LocalVideoTrack,
+                publishOptions: roomOptions.defaultVideoPublishOptions);
           } else {
-            _localParticipant!.setCameraEnabled(true);
+            _localParticipant!.setCameraEnabled(true,
+                cameraCaptureOptions: roomOptions.defaultCameraCaptureOptions);
           }
         }
 
         var screen = options.screen;
         if (screen.enabled != null && screen.enabled == true) {
           if (screen.track != null) {
-            _localParticipant!
-                .publishVideoTrack(screen.track as LocalVideoTrack);
+            _localParticipant!.publishVideoTrack(
+                screen.track as LocalVideoTrack,
+                publishOptions: roomOptions.defaultVideoPublishOptions);
           } else {
-            _localParticipant!.setScreenShareEnabled(true);
+            _localParticipant!.setScreenShareEnabled(true,
+                screenShareCaptureOptions:
+                    roomOptions.defaultScreenShareCaptureOptions);
           }
         }
       }
