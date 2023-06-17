@@ -33,10 +33,10 @@ class LocalAudioTrack extends LocalTrack
   AudioSenderStats? prevStats;
 
   @override
-  Future<void> monitorSender() async {
-    if (sender == null) {
+  Future<bool> monitorStats() async {
+    if (sender == null || events.isDisposed) {
       _currentBitrate = 0;
-      return;
+      return false;
     }
     final stats = await getSenderStats();
 
@@ -47,6 +47,7 @@ class LocalAudioTrack extends LocalTrack
     }
 
     prevStats = stats;
+    return true;
   }
 
   Future<AudioSenderStats?> getSenderStats() async {
@@ -83,13 +84,11 @@ class LocalAudioTrack extends LocalTrack
   // private constructor
   @internal
   LocalAudioTrack(
-    String name,
     TrackSource source,
     rtc.MediaStream stream,
     rtc.MediaStreamTrack track,
     this.currentOptions,
   ) : super(
-          name,
           lk_models.TrackType.AUDIO,
           source,
           stream,
@@ -104,7 +103,6 @@ class LocalAudioTrack extends LocalTrack
     final stream = await LocalTrack.createStream(options);
 
     return LocalAudioTrack(
-      '',
       TrackSource.microphone,
       stream,
       stream.getAudioTracks().first,

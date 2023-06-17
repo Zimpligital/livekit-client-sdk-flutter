@@ -10,11 +10,10 @@ import '../stats.dart';
 import 'remote.dart';
 
 class RemoteVideoTrack extends RemoteTrack with VideoTrack {
-  RemoteVideoTrack(String name, TrackSource source, rtc.MediaStream stream,
-      rtc.MediaStreamTrack track,
+  RemoteVideoTrack(
+      TrackSource source, rtc.MediaStream stream, rtc.MediaStreamTrack track,
       {rtc.RTCRtpReceiver? receiver})
       : super(
-          name,
           lk_models.TrackType.VIDEO,
           source,
           stream,
@@ -32,10 +31,10 @@ class RemoteVideoTrack extends RemoteTrack with VideoTrack {
   }
 
   @override
-  Future<void> monitorReceiver() async {
-    if (receiver == null) {
+  Future<bool> monitorStats() async {
+    if (receiver == null && events.isDisposed) {
       _currentBitrate = 0;
-      return;
+      return false;
     }
     final stats = await getReceiverStats();
 
@@ -46,6 +45,7 @@ class RemoteVideoTrack extends RemoteTrack with VideoTrack {
     }
 
     prevStats = stats;
+    return true;
   }
 
   Future<VideoReceiverStats?> getReceiverStats() async {

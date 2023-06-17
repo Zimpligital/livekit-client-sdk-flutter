@@ -7,7 +7,6 @@ import '../../proto/livekit_models.pb.dart' as lk_models;
 import '../../types/other.dart';
 import '../options.dart';
 import '../stats.dart';
-import '../track.dart';
 import 'audio.dart';
 import 'local.dart';
 
@@ -24,17 +23,17 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
   final Map<String, num> _bitrateFoLayers = {};
 
   @override
-  Future<void> monitorSender() async {
-    if (sender == null) {
+  Future<bool> monitorStats() async {
+    if (sender == null || events.isDisposed) {
       _currentBitrate = 0;
-      return;
+      return false;
     }
     List<VideoSenderStats> stats = [];
     try {
       stats = await getSenderStats();
     } catch (e) {
       logger.warning('Failed to get sender stats: $e');
-      return;
+      return false;
     }
     Map<String, VideoSenderStats> statsMap = {};
 
@@ -59,6 +58,7 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
     }
 
     prevStats = statsMap;
+    return true;
   }
 
   Future<List<VideoSenderStats>> getSenderStats() async {
@@ -113,13 +113,11 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
 
   // Private constructor
   LocalVideoTrack._(
-    String name,
     TrackSource source,
     rtc.MediaStream stream,
     rtc.MediaStreamTrack track,
     this.currentOptions,
   ) : super(
-          name,
           lk_models.TrackType.VIDEO,
           source,
           stream,
@@ -134,7 +132,6 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
 
     final stream = await LocalTrack.createStream(options);
     return LocalVideoTrack._(
-      Track.cameraName,
       TrackSource.camera,
       stream,
       stream.getVideoTracks().first,
@@ -149,11 +146,10 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
   static Future<LocalVideoTrack> createScreenShareTrack([
     ScreenShareCaptureOptions? options,
   ]) async {
-    options = const ScreenShareCaptureOptions();
+    options ??= const ScreenShareCaptureOptions();
 
     final stream = await LocalTrack.createStream(options);
     return LocalVideoTrack._(
-      Track.screenShareName,
       TrackSource.screenShareVideo,
       stream,
       stream.getVideoTracks().first,
@@ -175,7 +171,6 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
 
     List<LocalTrack> tracks = [
       LocalVideoTrack._(
-        Track.screenShareName,
         TrackSource.screenShareVideo,
         stream,
         stream.getVideoTracks().first,
@@ -184,12 +179,8 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
     ];
 
     if (stream.getAudioTracks().isNotEmpty) {
-      tracks.add(LocalAudioTrack(
-          Track.screenShareName,
-          TrackSource.screenShareAudio,
-          stream,
-          stream.getAudioTracks().first,
-          const AudioCaptureOptions()));
+      tracks.add(LocalAudioTrack(TrackSource.screenShareAudio, stream,
+          stream.getAudioTracks().first, const AudioCaptureOptions()));
     }
     return tracks;
   }
@@ -206,10 +197,13 @@ extension LocalVideoTrackExt on LocalVideoTrack {
       logger.warning('Not a camera track');
       return;
     }
-
-    await restartTrack(
-      options.copyWith(cameraPosition: position),
-    );
+    final newOptions = CameraCaptureOptions(
+        cameraPosition: position,
+        deviceId: null,
+        maxFrameRate: options.maxFrameRate,
+        params: options.params);
+    await restartTrack(newOptions);
+    currentOptions = newOptions;
   }
 
   Future<void> switchCamera(String deviceId, {bool fastSwitch = false}) async {
