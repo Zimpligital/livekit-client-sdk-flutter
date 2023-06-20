@@ -132,6 +132,7 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
       appleAudioCategory: AppleAudioCategory.playAndRecord,
       appleAudioCategoryOptions: {
         AppleAudioCategoryOption.mixWithOthers,
+        AppleAudioCategoryOption.allowBluetooth,
       },
       appleAudioMode: AppleAudioMode.default_,
     );
@@ -151,7 +152,10 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
 
   return NativeAudioConfiguration(
     appleAudioCategory: AppleAudioCategory.playAndRecord,
-    appleAudioCategoryOptions: {},
+    appleAudioCategoryOptions: {
+      AppleAudioCategoryOption.mixWithOthers,
+      AppleAudioCategoryOption.allowBluetooth,
+    },
     appleAudioMode: AppleAudioMode.default_,
   );
 }
