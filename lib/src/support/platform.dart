@@ -1,10 +1,20 @@
 import 'dart:io';
+
 import 'platform/io.dart' if (dart.library.html) 'platform/web.dart';
 
 // Returns the current platform which works for both web and devices.
 PlatformType lkPlatform() => lkPlatformImplementation();
 
 bool lkPlatformIs(PlatformType type) => lkPlatform() == type;
+
+bool lkPlatformIsMobile() =>
+    [PlatformType.iOS, PlatformType.android].contains(lkPlatform());
+
+bool lkPlatformIsDesktop() => [
+      PlatformType.macOS,
+      PlatformType.windows,
+      PlatformType.linux
+    ].contains(lkPlatform());
 
 bool lkPlatformSupportsE2EE() => lkE2EESupportedImplementation();
 

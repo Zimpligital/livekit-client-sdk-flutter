@@ -145,12 +145,28 @@ class _ConnectPageState extends State<ConnectPage> {
         roomOptions: RoomOptions(
           adaptiveStream: _adaptiveStream,
           dynacast: _dynacast,
+          defaultAudioPublishOptions:
+              const AudioPublishOptions(name: 'custom_audio_track_name'),
           defaultVideoPublishOptions: VideoPublishOptions(
             simulcast: _simulcast,
           ),
-          defaultScreenShareCaptureOptions:
-              const ScreenShareCaptureOptions(useiOSBroadcastExtension: true),
+          defaultScreenShareCaptureOptions: const ScreenShareCaptureOptions(
+              useiOSBroadcastExtension: true,
+              params: VideoParameters(
+                  dimensions: VideoDimensionsPresets.h1080_169,
+                  encoding: VideoEncoding(
+                    maxBitrate: 3 * 1000 * 1000,
+                    maxFramerate: 15,
+                  ))),
           e2eeOptions: e2eeOptions,
+          defaultCameraCaptureOptions: const CameraCaptureOptions(
+              maxFrameRate: 30,
+              params: VideoParameters(
+                  dimensions: VideoDimensionsPresets.h720_169,
+                  encoding: VideoEncoding(
+                    maxBitrate: 2 * 1000 * 1000,
+                    maxFramerate: 30,
+                  ))),
         ),
         fastConnectOptions: _fastConnect
             ? FastConnectOptions(

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 
+import '../support/platform.dart';
 import '../track/local/audio.dart';
 import '../track/local/video.dart';
 import '../types/video_parameters.dart';
@@ -43,8 +43,9 @@ class CameraCaptureOptions extends VideoCaptureOptions {
   Map<String, dynamic> toMediaConstraintsMap() {
     var constraints = <String, dynamic>{
       ...super.toMediaConstraintsMap(),
-      'facingMode':
-          cameraPosition == CameraPosition.front ? 'user' : 'environment',
+      if (deviceId == null)
+        'facingMode':
+            cameraPosition == CameraPosition.front ? 'user' : 'environment'
     };
     if (deviceId != null) {
       if (kIsWeb) {
@@ -82,11 +83,21 @@ class ScreenShareCaptureOptions extends VideoCaptureOptions {
   /// See instructions on how to setup your Broadcast Extension here:
   /// https://github.com/flutter-webrtc/flutter-webrtc/wiki/iOS-Screen-Sharing#broadcast-extension-quick-setup
   final bool useiOSBroadcastExtension;
+
+  // for browser only, if true, will capture screen audio.
   final bool captureScreenAudio;
+
+  /// for browser only, if true, will capture current tab.
+  final bool preferCurrentTab;
+
+  /// for browser only, include or exclude self browser surface.
+  final String? selfBrowserSurface;
 
   const ScreenShareCaptureOptions({
     this.useiOSBroadcastExtension = false,
     this.captureScreenAudio = false,
+    this.preferCurrentTab = true,
+    this.selfBrowserSurface,
     String? sourceId,
     double? maxFrameRate,
     VideoParameters params = VideoParametersPresets.screenShareH1080FPS15,
@@ -95,6 +106,8 @@ class ScreenShareCaptureOptions extends VideoCaptureOptions {
   ScreenShareCaptureOptions.from(
       {this.useiOSBroadcastExtension = false,
       this.captureScreenAudio = false,
+      this.preferCurrentTab = true,
+      this.selfBrowserSurface,
       required VideoCaptureOptions captureOptions})
       : super(params: captureOptions.params);
 
@@ -103,21 +116,25 @@ class ScreenShareCaptureOptions extends VideoCaptureOptions {
     VideoParameters? params,
     String? sourceId,
     double? maxFrameRate,
+    bool? preferCurrentTab,
+    String? selfBrowserSurface,
   }) =>
       ScreenShareCaptureOptions(
         captureScreenAudio: captureScreenAudio ?? this.captureScreenAudio,
         params: params ?? this.params,
         sourceId: sourceId ?? deviceId,
         maxFrameRate: maxFrameRate ?? this.maxFrameRate,
+        preferCurrentTab: preferCurrentTab ?? this.preferCurrentTab,
+        selfBrowserSurface: selfBrowserSurface ?? this.selfBrowserSurface,
       );
 
   @override
   Map<String, dynamic> toMediaConstraintsMap() {
     var constraints = super.toMediaConstraintsMap();
-    if (useiOSBroadcastExtension && WebRTC.platformIsIOS) {
+    if (useiOSBroadcastExtension && lkPlatformIs(PlatformType.iOS)) {
       constraints['deviceId'] = 'broadcast';
     }
-    if (WebRTC.platformIsDesktop) {
+    if (lkPlatformIsDesktop()) {
       if (deviceId != null) {
         constraints['deviceId'] = {'exact': deviceId};
       }

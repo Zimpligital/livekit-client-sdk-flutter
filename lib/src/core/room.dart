@@ -1,9 +1,8 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:livekit_client/src/hardware/hardware.dart';
-import 'package:livekit_client/src/support/app_state.dart';
+
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 
 import '../core/signal_client.dart';
@@ -11,6 +10,7 @@ import '../e2ee/e2ee_manager.dart';
 import '../events.dart';
 import '../exceptions.dart';
 import '../extensions.dart';
+import '../hardware/hardware.dart';
 import '../internal/events.dart';
 import '../logger.dart';
 import '../managers/event.dart';
@@ -20,6 +20,7 @@ import '../participant/participant.dart';
 import '../participant/remote.dart';
 import '../proto/livekit_models.pb.dart' as lk_models;
 import '../proto/livekit_rtc.pb.dart' as lk_rtc;
+import '../support/app_state.dart';
 import '../support/disposable.dart';
 import '../support/platform.dart';
 import '../track/local/audio.dart';
@@ -27,6 +28,9 @@ import '../track/local/video.dart';
 import '../track/track.dart';
 import '../types/other.dart';
 import 'engine.dart';
+
+import '../track/web/_audio_api.dart'
+    if (dart.library.html) '../track/web/_audio_html.dart' as audio;
 
 /// Room is the primary construct for LiveKit conferences. It contains a
 /// group of [Participant]s, each publishing and subscribing to [Track]s.
@@ -78,6 +82,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
   E2EEManager? _e2eeManager;
   bool get isRecording => _isRecording;
   bool _isRecording = false;
+  bool _audioEnabled = true;
 
   /// a list of participants that are actively speaking, including local participant.
   UnmodifiableListView<Participant> get activeSpeakers =>
@@ -196,30 +201,35 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         var audio = options.microphone;
         if (audio.enabled != null && audio.enabled == true) {
           if (audio.track != null) {
-            _localParticipant!
-                .publishAudioTrack(audio.track as LocalAudioTrack);
+            _localParticipant!.publishAudioTrack(audio.track as LocalAudioTrack,
+                publishOptions: roomOptions.defaultAudioPublishOptions);
           } else {
-            _localParticipant!.setMicrophoneEnabled(true);
+            _localParticipant!.setMicrophoneEnabled(true,
+                audioCaptureOptions: roomOptions.defaultAudioCaptureOptions);
           }
         }
 
         var video = options.camera;
         if (video.enabled != null && video.enabled == true) {
           if (video.track != null) {
-            _localParticipant!
-                .publishVideoTrack(video.track as LocalVideoTrack);
+            _localParticipant!.publishVideoTrack(video.track as LocalVideoTrack,
+                publishOptions: roomOptions.defaultVideoPublishOptions);
           } else {
-            _localParticipant!.setCameraEnabled(true);
+            _localParticipant!.setCameraEnabled(true,
+                cameraCaptureOptions: roomOptions.defaultCameraCaptureOptions);
           }
         }
 
         var screen = options.screen;
         if (screen.enabled != null && screen.enabled == true) {
           if (screen.track != null) {
-            _localParticipant!
-                .publishVideoTrack(screen.track as LocalVideoTrack);
+            _localParticipant!.publishVideoTrack(
+                screen.track as LocalVideoTrack,
+                publishOptions: roomOptions.defaultVideoPublishOptions);
           } else {
-            _localParticipant!.setScreenShareEnabled(true);
+            _localParticipant!.setScreenShareEnabled(true,
+                screenShareCaptureOptions:
+                    roomOptions.defaultScreenShareCaptureOptions);
           }
         }
       }
@@ -352,6 +362,12 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     ..on<EngineActiveSpeakersUpdateEvent>(
         (event) => _onEngineActiveSpeakersUpdateEvent(event.speakers))
     ..on<EngineDataPacketReceivedEvent>(_onDataMessageEvent)
+    ..on<AudioPlaybackStarted>((event) {
+      _handleAudioPlaybackStarted();
+    })
+    ..on<AudioPlaybackFailed>((event) {
+      _handleAudioPlaybackFailed();
+    })
     ..on<EngineTrackAddedEvent>((event) async {
       logger.fine('EngineTrackAddedEvent trackSid:${event.track.id}');
 
@@ -774,5 +790,39 @@ extension RoomHardwareManagementMethods on Room {
             roomOptions.defaultAudioOutputOptions.speakerOn!);
       }
     }
+  }
+
+  Future<void> startAudio() async {
+    try {
+      var audioContextRunning = await audio.startAllAudioElement();
+      if (audioContextRunning) {
+        _handleAudioPlaybackStarted();
+      } else {
+        _handleAudioPlaybackFailed();
+      }
+    } catch (err) {
+      logger.warning('could not playback audio $err');
+      _handleAudioPlaybackFailed();
+    }
+  }
+
+  bool get canPlaybackAudio {
+    return _audioEnabled;
+  }
+
+  void _handleAudioPlaybackStarted() {
+    if (canPlaybackAudio) {
+      return;
+    }
+    _audioEnabled = true;
+    events.emit(const AudioPlaybackStatusChanged(isPlaying: true));
+  }
+
+  void _handleAudioPlaybackFailed() {
+    if (!canPlaybackAudio) {
+      return;
+    }
+    _audioEnabled = false;
+    events.emit(const AudioPlaybackStatusChanged(isPlaying: false));
   }
 }

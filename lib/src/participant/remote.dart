@@ -5,6 +5,7 @@ import '../core/room.dart';
 import '../events.dart';
 import '../exceptions.dart';
 import '../extensions.dart';
+import '../internal/events.dart';
 import '../logger.dart';
 import '../proto/livekit_models.pb.dart' as lk_models;
 import '../publication/remote.dart';
@@ -115,12 +116,23 @@ class RemoteParticipant extends Participant<RemoteTrackPublication> {
     final RemoteTrack track;
     if (pub.kind == lk_models.TrackType.VIDEO) {
       // video track
-      track = RemoteVideoTrack(pub.name, pub.source, stream, mediaTrack,
-          receiver: receiver);
+      track =
+          RemoteVideoTrack(pub.source, stream, mediaTrack, receiver: receiver);
     } else if (pub.kind == lk_models.TrackType.AUDIO) {
       // audio track
-      track = RemoteAudioTrack(pub.name, pub.source, stream, mediaTrack,
-          receiver: receiver);
+      track =
+          RemoteAudioTrack(pub.source, stream, mediaTrack, receiver: receiver);
+
+      var listener = track.createListener();
+      listener.on<AudioPlaybackStarted>((event) {
+        logger.fine('AudioPlaybackStarted');
+        room.engine.events.emit(event);
+      });
+
+      listener.on<AudioPlaybackFailed>((event) {
+        logger.fine('AudioPlaybackFailed');
+        room.engine.events.emit(event);
+      });
     } else {
       throw UnexpectedStateException('Unknown track type');
     }
