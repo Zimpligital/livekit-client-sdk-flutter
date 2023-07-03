@@ -133,9 +133,10 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
       appleAudioCategoryOptions: {
         AppleAudioCategoryOption.allowBluetooth,
         AppleAudioCategoryOption.mixWithOthers,
-        AppleAudioCategoryOption.allowBluetooth,
       },
-      appleAudioMode: AppleAudioMode.default_,
+      appleAudioMode: Hardware.instance.preferSpeakerOutput
+          ? AppleAudioMode.default_
+          : AppleAudioMode.voiceChat,
     );
   } else if ([
     AudioTrackState.localOnly,
@@ -159,6 +160,8 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
       AppleAudioCategoryOption.allowBluetooth,
       AppleAudioCategoryOption.mixWithOthers,
     },
-    appleAudioMode: AppleAudioMode.default_,
+    appleAudioMode: Hardware.instance.preferSpeakerOutput
+        ? AppleAudioMode.default_
+        : AppleAudioMode.voiceChat,
   );
 }
