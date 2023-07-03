@@ -1,5 +1,6 @@
 import 'package:synchronized/synchronized.dart' as sync;
 
+import '../hardware/hardware.dart';
 import '../logger.dart';
 import '../support/native.dart';
 import '../support/native_audio.dart';
@@ -15,7 +16,7 @@ enum AudioTrackState {
 }
 
 typedef ConfigureNativeAudioFunc = Future<NativeAudioConfiguration> Function(
-    AudioTrackState state, bool asCallChatSession);
+    AudioTrackState state);
 
 // it's possible to set custom function here to customize audio session configuration
 ConfigureNativeAudioFunc onConfigureNativeAudio =
@@ -23,7 +24,9 @@ ConfigureNativeAudioFunc onConfigureNativeAudio =
 
 final _trackCounterLock = sync.Lock();
 AudioTrackState _audioTrackState = AudioTrackState.none;
-bool _asCallChatSession = false;
+
+AudioTrackState get audioTrackState => _audioTrackState;
+
 int _localTrackCount = 0;
 int _remoteTrackCount = 0;
 
@@ -31,9 +34,6 @@ mixin LocalAudioManagementMixin on LocalTrack, AudioTrack {
   @override
   Future<bool> onPublish([bool? asCallChatSession]) async {
     final didUpdate = await super.onPublish();
-    if(asCallChatSession != null){
-      _asCallChatSession = asCallChatSession;
-    }
     if (didUpdate) {
       // update counter
       await _trackCounterLock.synchronized(() async {
@@ -98,7 +98,7 @@ Future<void> _onAudioTrackCountDidChange() async {
     NativeAudioConfiguration? config;
     if (lkPlatformIs(PlatformType.iOS)) {
       // Only iOS for now...
-      config = await onConfigureNativeAudio.call(_audioTrackState, _asCallChatSession);
+      config = await onConfigureNativeAudio.call(_audioTrackState);
     }
 
     if (config != null) {
@@ -125,12 +125,13 @@ AudioTrackState _computeAudioTrackState() {
 }
 
 Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
-    AudioTrackState state, bool asCallChatSession) async {
+    AudioTrackState state) async {
   //
   if (state == AudioTrackState.remoteOnly) {
     return NativeAudioConfiguration(
       appleAudioCategory: AppleAudioCategory.playAndRecord,
       appleAudioCategoryOptions: {
+        AppleAudioCategoryOption.allowBluetooth,
         AppleAudioCategoryOption.mixWithOthers,
         AppleAudioCategoryOption.allowBluetooth,
       },
@@ -139,22 +140,24 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
   } else if ([
     AudioTrackState.localOnly,
     AudioTrackState.localAndRemote,
-  ].contains(state) && !asCallChatSession) {
+  ].contains(state)) {
     return NativeAudioConfiguration(
       appleAudioCategory: AppleAudioCategory.playAndRecord,
       appleAudioCategoryOptions: {
         AppleAudioCategoryOption.allowBluetooth,
         AppleAudioCategoryOption.mixWithOthers,
       },
-      appleAudioMode: AppleAudioMode.videoChat,
+      appleAudioMode: Hardware.instance.preferSpeakerOutput
+          ? AppleAudioMode.videoChat
+          : AppleAudioMode.voiceChat,
     );
   }
 
   return NativeAudioConfiguration(
     appleAudioCategory: AppleAudioCategory.playAndRecord,
     appleAudioCategoryOptions: {
-      AppleAudioCategoryOption.mixWithOthers,
       AppleAudioCategoryOption.allowBluetooth,
+      AppleAudioCategoryOption.mixWithOthers,
     },
     appleAudioMode: AppleAudioMode.default_,
   );
