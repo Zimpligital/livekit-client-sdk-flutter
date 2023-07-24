@@ -32,7 +32,7 @@ int _remoteTrackCount = 0;
 
 mixin LocalAudioManagementMixin on LocalTrack, AudioTrack {
   @override
-  Future<bool> onPublish([bool? asCallChatSession]) async {
+  Future<bool> onPublish() async {
     final didUpdate = await super.onPublish();
     if (didUpdate) {
       // update counter
@@ -105,6 +105,9 @@ Future<void> _onAudioTrackCountDidChange() async {
       logger.fine('configuring for ${_audioTrackState} using ${config}...');
       try {
         await Native.configureAudio(config);
+        if (Hardware.instance.speakerOn == true) {
+          await Hardware.instance.setSpeakerphoneOn(true);
+        }
       } catch (error) {
         logger.warning('failed to configure ${error}');
       }
@@ -126,23 +129,7 @@ AudioTrackState _computeAudioTrackState() {
 
 Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
     AudioTrackState state) async {
-  //
-  if (state == AudioTrackState.remoteOnly) {
-    return NativeAudioConfiguration(
-      appleAudioCategory: AppleAudioCategory.playAndRecord,
-      appleAudioCategoryOptions: {
-        AppleAudioCategoryOption.allowBluetooth,
-        AppleAudioCategoryOption.mixWithOthers,
-      },
-      appleAudioMode: Hardware.instance.preferSpeakerOutput
-          ? AppleAudioMode.default_
-          : AppleAudioMode.voiceChat,
-    );
-  } else if ([
-    AudioTrackState.localOnly,
-    AudioTrackState.localAndRemote,
-  ].contains(state)) {
-    return NativeAudioConfiguration(
+  return NativeAudioConfiguration(
       appleAudioCategory: AppleAudioCategory.playAndRecord,
       appleAudioCategoryOptions: {
         AppleAudioCategoryOption.allowBluetooth,
@@ -152,16 +139,42 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
           ? AppleAudioMode.videoChat
           : AppleAudioMode.voiceChat,
     );
-  }
 
-  return NativeAudioConfiguration(
-    appleAudioCategory: AppleAudioCategory.playAndRecord,
-    appleAudioCategoryOptions: {
-      AppleAudioCategoryOption.allowBluetooth,
-      AppleAudioCategoryOption.mixWithOthers,
-    },
-    appleAudioMode: Hardware.instance.preferSpeakerOutput
-        ? AppleAudioMode.default_
-        : AppleAudioMode.voiceChat,
-  );
+  // if (state == AudioTrackState.remoteOnly) {
+  //   return NativeAudioConfiguration(
+  //     appleAudioCategory: AppleAudioCategory.playAndRecord,
+  //     appleAudioCategoryOptions: {
+  //       AppleAudioCategoryOption.allowBluetooth,
+  //       AppleAudioCategoryOption.mixWithOthers,
+  //     },
+  //     appleAudioMode: Hardware.instance.preferSpeakerOutput
+  //         ? AppleAudioMode.default_
+  //         : AppleAudioMode.voiceChat,
+  //   );
+  // } else if ([
+  //   AudioTrackState.localOnly,
+  //   AudioTrackState.localAndRemote,
+  // ].contains(state)) {
+  //   return NativeAudioConfiguration(
+  //     appleAudioCategory: AppleAudioCategory.playAndRecord,
+  //     appleAudioCategoryOptions: {
+  //       AppleAudioCategoryOption.allowBluetooth,
+  //       AppleAudioCategoryOption.mixWithOthers,
+  //     },
+  //     appleAudioMode: Hardware.instance.preferSpeakerOutput
+  //         ? AppleAudioMode.videoChat
+  //         : AppleAudioMode.voiceChat,
+  //   );
+  // }
+
+  // return NativeAudioConfiguration(
+  //   appleAudioCategory: AppleAudioCategory.playAndRecord,
+  //   appleAudioCategoryOptions: {
+  //     AppleAudioCategoryOption.allowBluetooth,
+  //     AppleAudioCategoryOption.mixWithOthers,
+  //   },
+  //   appleAudioMode: Hardware.instance.preferSpeakerOutput
+  //       ? AppleAudioMode.default_
+  //       : AppleAudioMode.voiceChat,
+  // );
 }

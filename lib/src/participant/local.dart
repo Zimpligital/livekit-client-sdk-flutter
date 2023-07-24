@@ -90,7 +90,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
 
     // did publish
     // Code from original: await track.onPublish();
-    await track.onPublish(room.roomOptions.asCallChatSession);
+    await track.onPublish();
     await room.applyAudioSpeakerSettings();
 
     [events, room.events].emit(LocalTrackPublishedEvent(

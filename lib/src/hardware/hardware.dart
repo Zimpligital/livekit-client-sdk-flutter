@@ -108,19 +108,34 @@ class Hardware {
 
   Future<void> setPreferSpeakerOutput(bool enable) async {
     if (lkPlatformIsMobile()) {
-      if (_preferSpeakerOutput != enable) {
-        NativeAudioConfiguration? config;
-        if (lkPlatformIs(PlatformType.iOS)) {
-          // Only iOS for now...
-          config = await onConfigureNativeAudio.call(audioTrackState);
-          logger.fine('configuring for ${audioTrackState} using ${config}...');
-          try {
-            await Native.configureAudio(config);
-          } catch (error) {
-            logger.warning('failed to configure ${error}');
-          }
-        }
+      // if (_preferSpeakerOutput != enable) {
+      //   NativeAudioConfiguration? config;
+      //   if (lkPlatformIs(PlatformType.iOS)) {
+      //     // Only iOS for now...
+      //     config = await onConfigureNativeAudio.call(audioTrackState);
+      //     logger.fine('configuring for ${audioTrackState} using ${config}...');
+      //     try {
+      //       await Native.configureAudio(config);
+      //     } catch (error) {
+      //       logger.warning('failed to configure ${error}');
+      //     }
+      //   }
+      // }
+      NativeAudioConfiguration config = NativeAudioConfiguration(
+        appleAudioCategory: AppleAudioCategory.playAndRecord,
+        appleAudioCategoryOptions: {
+          AppleAudioCategoryOption.allowBluetooth,
+          AppleAudioCategoryOption.mixWithOthers,
+        },
+        appleAudioMode:
+            enable ? AppleAudioMode.videoChat : AppleAudioMode.voiceChat,
+      );
+      try {
+        await Native.configureAudio(config);
+      } catch (error) {
+        logger.warning('failed to configure ${error}');
       }
+
       _preferSpeakerOutput = enable;
     } else {
       logger.warning('setPreferSpeakerOutput only support on iOS/Android');

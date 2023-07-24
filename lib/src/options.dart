@@ -89,8 +89,6 @@ class RoomOptions {
   /// Defaults to true.
   final bool stopLocalTrackOnUnpublish;
 
-  final bool asCallChatSession;
-
   /// Options for end-to-end encryption.
   final E2EEOptions? e2eeOptions;
 
@@ -104,7 +102,6 @@ class RoomOptions {
     this.adaptiveStream = false,
     this.dynacast = false,
     this.stopLocalTrackOnUnpublish = true,
-    this.asCallChatSession = false,
     this.e2eeOptions,
   });
 
