@@ -105,9 +105,6 @@ Future<void> _onAudioTrackCountDidChange() async {
       logger.fine('configuring for ${_audioTrackState} using ${config}...');
       try {
         await Native.configureAudio(config);
-        if (Hardware.instance.speakerOn == true) {
-          await Hardware.instance.setSpeakerphoneOn(true);
-        }
       } catch (error) {
         logger.warning('failed to configure ${error}');
       }
