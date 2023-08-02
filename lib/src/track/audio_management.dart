@@ -129,15 +129,15 @@ AudioTrackState _computeAudioTrackState() {
 Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
     AudioTrackState state) async {
   return NativeAudioConfiguration(
-      appleAudioCategory: AppleAudioCategory.playAndRecord,
-      appleAudioCategoryOptions: {
-        AppleAudioCategoryOption.allowBluetooth,
-        AppleAudioCategoryOption.mixWithOthers,
-      },
-      appleAudioMode: Hardware.instance.preferSpeakerOutput
-          ? AppleAudioMode.videoChat
-          : AppleAudioMode.voiceChat,
-    );
+    appleAudioCategory: AppleAudioCategory.playAndRecord,
+    appleAudioCategoryOptions: {
+      AppleAudioCategoryOption.allowBluetooth,
+      AppleAudioCategoryOption.mixWithOthers,
+    },
+    appleAudioMode: Hardware.instance.preferSpeakerOutput
+        ? AppleAudioMode.videoChat
+        : AppleAudioMode.voiceChat,
+  );
 
   // if (state == AudioTrackState.remoteOnly) {
   //   return NativeAudioConfiguration(
