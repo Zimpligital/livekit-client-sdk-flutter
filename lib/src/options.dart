@@ -1,3 +1,17 @@
+// Copyright 2023 LiveKit, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'constants.dart';
 import 'core/room.dart';
 import 'e2ee/options.dart';
@@ -16,6 +30,12 @@ class TrackOption<E extends Object, T extends Object> {
   const TrackOption({this.enabled, this.track});
 }
 
+/// This will enable the local participant to publish tracks on connect,
+/// instead of having to explicitly publish them.
+/// Defaults to false for all three tracks: microphone, camera, and screen.
+/// You can also create LocalAudio/VideoTrack on your `PreJoin` page
+/// (preview camera or select audio device), Automatically publish these
+/// tracks after the room is connected.
 class FastConnectOptions {
   FastConnectOptions({
     this.microphone = const TrackOption(enabled: false),

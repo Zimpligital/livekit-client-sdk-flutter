@@ -1,3 +1,17 @@
+// Copyright 2023 LiveKit, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'dart:html';
 import 'dart:js';
 import 'dart:js_util' as jsutil;
@@ -161,7 +175,7 @@ class FrameCryptor {
   CryptorError lastError = CryptorError.kNew;
   final DedicatedWorkerGlobalScope worker;
   int currentKeyIndex = 0;
-
+  bool hasValidKey = false;
   Completer? _ratchetCompleter;
 
   List<KeySet?> cryptoKeyRing = List.filled(KEYRING_SIZE, null);
@@ -243,6 +257,7 @@ class FrameCryptor {
       keyOptions.ratchetSalt,
     );
     await setKeySetFromMaterial(keySet, keyIndex);
+    hasValidKey = true;
   }
 
   Future<void> setKeySetFromMaterial(KeySet keySet, int keyIndex) async {
@@ -530,7 +545,7 @@ class FrameCryptor {
       var initialKeySet = getKeySet(keyIndex);
       initialKeyIndex = keyIndex;
 
-      if (initialKeySet == null) {
+      if (initialKeySet == null || !hasValidKey) {
         if (lastError != CryptorError.kMissingKey) {
           lastError = CryptorError.kMissingKey;
           postMessage({
@@ -641,6 +656,7 @@ class FrameCryptor {
       if (initialKeySet != null) {
         await setKeySetFromMaterial(initialKeySet, initialKeyIndex);
       }
+      hasValidKey = false;
     }
   }
 }

@@ -1,3 +1,17 @@
+// Copyright 2023 LiveKit, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
@@ -110,12 +124,11 @@ class E2EEManager {
   Future<FrameCryptor> _addRtpSender(RTCRtpSender sender, String participantId,
       String trackId, String kind) async {
     var pid = '$kind-sender-$participantId-$trackId';
-    var frameCryptor = await FrameCryptorFactory.instance
-        .createFrameCryptorForRtpSender(
-            participantId: pid,
-            sender: sender,
-            algorithm: _algorithm,
-            keyProvider: _keyProvider.keyProvider);
+    var frameCryptor = await frameCryptorFactory.createFrameCryptorForRtpSender(
+        participantId: pid,
+        sender: sender,
+        algorithm: _algorithm,
+        keyProvider: _keyProvider.keyProvider);
     _frameCryptors[trackId] = frameCryptor;
     await frameCryptor.setEnabled(_enabled);
     if (_keyProvider.options.sharedKey) {
@@ -129,8 +142,8 @@ class E2EEManager {
   Future<FrameCryptor> _addRtpReceiver(RTCRtpReceiver receiver,
       String participantId, String trackId, String kind) async {
     var pid = '$kind-receiver-$participantId-$trackId';
-    var frameCryptor = await FrameCryptorFactory.instance
-        .createFrameCryptorForRtpReceiver(
+    var frameCryptor =
+        await frameCryptorFactory.createFrameCryptorForRtpReceiver(
             participantId: pid,
             receiver: receiver,
             algorithm: _algorithm,
