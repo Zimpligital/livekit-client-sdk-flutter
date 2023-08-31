@@ -314,10 +314,12 @@ class SignalStreamStateUpdatedEvent with SignalEvent implements InternalEvent {
 @internal
 class SignalSubscribedQualityUpdatedEvent with SignalEvent implements InternalEvent {
   final String trackSid;
-  final List<lk_rtc.SubscribedQuality> updates;
+  final List<lk_rtc.SubscribedQuality> subscribedQualities;
+  final List<lk_rtc.SubscribedCodec> subscribedCodecs;
   const SignalSubscribedQualityUpdatedEvent({
     required this.trackSid,
-    required this.updates,
+    required this.subscribedCodecs,
+    required this.subscribedQualities,
   });
 }
 
