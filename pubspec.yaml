@@ -35,7 +35,7 @@ dependencies:
   meta: ^1.8.0
   http: ^1.1.0
   logging: ^1.1.0
-  uuid: ^4.0.0
+  uuid: ^3.0.6
   synchronized: ^3.0.0+3
   protobuf: ^3.0.0
   flutter_webrtc: 0.9.41
