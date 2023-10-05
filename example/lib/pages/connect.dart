@@ -28,6 +28,7 @@ class _ConnectPageState extends State<ConnectPage> {
   static const _storeKeyFastConnect = 'fast-connect';
   static const _storeKeyE2EE = 'e2ee';
   static const _storeKeySharedKey = 'shared-key';
+  static const _storeKeyMultiCodec = 'multi-codec';
 
   final _uriCtrl = TextEditingController();
   final _tokenCtrl = TextEditingController();
@@ -38,6 +39,9 @@ class _ConnectPageState extends State<ConnectPage> {
   bool _busy = false;
   bool _fastConnect = false;
   bool _e2ee = false;
+  bool _multiCodec = false;
+  String _preferredCodec = 'Preferred Codec';
+  String _backupCodec = 'VP8';
 
   @override
   void initState() {
@@ -95,6 +99,7 @@ class _ConnectPageState extends State<ConnectPage> {
       _dynacast = prefs.getBool(_storeKeyDynacast) ?? true;
       _fastConnect = prefs.getBool(_storeKeyFastConnect) ?? false;
       _e2ee = prefs.getBool(_storeKeyE2EE) ?? false;
+      _multiCodec = prefs.getBool(_storeKeyMultiCodec) ?? false;
     });
   }
 
@@ -109,6 +114,7 @@ class _ConnectPageState extends State<ConnectPage> {
     await prefs.setBool(_storeKeyDynacast, _dynacast);
     await prefs.setBool(_storeKeyFastConnect, _fastConnect);
     await prefs.setBool(_storeKeyE2EE, _e2ee);
+    await prefs.setBool(_storeKeyMultiCodec, _multiCodec);
   }
 
   Future<void> _connect(BuildContext ctx) async {
@@ -124,50 +130,49 @@ class _ConnectPageState extends State<ConnectPage> {
       print('Connecting with url: ${_uriCtrl.text}, '
           'token: ${_tokenCtrl.text}...');
 
-      //create new room
-      final room = Room();
-
-      // Create a Listener before connecting
-      final listener = room.createListener();
       E2EEOptions? e2eeOptions;
       if (_e2ee) {
         final keyProvider = await BaseKeyProvider.create();
         e2eeOptions = E2EEOptions(keyProvider: keyProvider);
         var sharedKey = _sharedKeyCtrl.text;
-        await keyProvider.setKey(sharedKey);
+        await keyProvider.setSharedKey(sharedKey);
       }
+
+      String preferredCodec = 'VP8';
+      if (_preferredCodec != 'Preferred Codec') {
+        preferredCodec = _preferredCodec;
+      }
+
+      // create new room
+      final room = Room(
+          roomOptions: RoomOptions(
+        adaptiveStream: _adaptiveStream,
+        dynacast: _dynacast,
+        defaultAudioPublishOptions: const AudioPublishOptions(
+          dtx: true,
+        ),
+        defaultVideoPublishOptions: VideoPublishOptions(
+          simulcast: _simulcast,
+          videoCodec: preferredCodec,
+        ),
+        defaultScreenShareCaptureOptions: const ScreenShareCaptureOptions(
+            useiOSBroadcastExtension: true,
+            params: VideoParametersPresets.screenShareH1080FPS30),
+        e2eeOptions: e2eeOptions,
+        defaultCameraCaptureOptions: const CameraCaptureOptions(
+          maxFrameRate: 30,
+          params: VideoParametersPresets.h720_169,
+        ),
+      ));
+
+      // Create a Listener before connecting
+      final listener = room.createListener();
 
       // Try to connect to the room
       // This will throw an Exception if it fails for any reason.
       await room.connect(
         _uriCtrl.text,
         _tokenCtrl.text,
-        roomOptions: RoomOptions(
-          adaptiveStream: _adaptiveStream,
-          dynacast: _dynacast,
-          defaultAudioPublishOptions:
-              const AudioPublishOptions(name: 'custom_audio_track_name'),
-          defaultVideoPublishOptions: VideoPublishOptions(
-            simulcast: _simulcast,
-          ),
-          defaultScreenShareCaptureOptions: const ScreenShareCaptureOptions(
-              useiOSBroadcastExtension: true,
-              params: VideoParameters(
-                  dimensions: VideoDimensionsPresets.h1080_169,
-                  encoding: VideoEncoding(
-                    maxBitrate: 3 * 1000 * 1000,
-                    maxFramerate: 15,
-                  ))),
-          e2eeOptions: e2eeOptions,
-          defaultCameraCaptureOptions: const CameraCaptureOptions(
-              maxFrameRate: 30,
-              params: VideoParameters(
-                  dimensions: VideoDimensionsPresets.h720_169,
-                  encoding: VideoEncoding(
-                    maxBitrate: 2 * 1000 * 1000,
-                    maxFramerate: 30,
-                  ))),
-        ),
         fastConnectOptions: _fastConnect
             ? FastConnectOptions(
                 microphone: const TrackOption(enabled: true),
@@ -222,6 +227,13 @@ class _ConnectPageState extends State<ConnectPage> {
     if (value == null || _fastConnect == value) return;
     setState(() {
       _fastConnect = value;
+    });
+  }
+
+  void _setMultiCodec(bool? value) async {
+    if (value == null || _multiCodec == value) return;
+    setState(() {
+      _multiCodec = value;
     });
   }
 
@@ -320,7 +332,7 @@ class _ConnectPageState extends State<ConnectPage> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 25),
+                    padding: const EdgeInsets.only(bottom: 5),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -332,6 +344,97 @@ class _ConnectPageState extends State<ConnectPage> {
                       ],
                     ),
                   ),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: _multiCodec ? 5 : 25),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Multi Codec'),
+                        Switch(
+                          value: _multiCodec,
+                          onChanged: (value) => _setMultiCodec(value),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_multiCodec)
+                    Padding(
+                        padding: const EdgeInsets.only(bottom: 5),
+                        child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Preferred Codec:'),
+                              DropdownButton<String>(
+                                value: _preferredCodec,
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Colors.blue,
+                                ),
+                                elevation: 16,
+                                style: const TextStyle(color: Colors.blue),
+                                underline: Container(
+                                  height: 2,
+                                  color: Colors.blueAccent,
+                                ),
+                                onChanged: (String? value) {
+                                  // This is called when the user selects an item.
+                                  setState(() {
+                                    _preferredCodec = value!;
+                                  });
+                                },
+                                items: [
+                                  'Preferred Codec',
+                                  'AV1',
+                                  'VP9',
+                                  'VP8',
+                                  'H264'
+                                ].map<DropdownMenuItem<String>>((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                              )
+                            ])),
+                  if (_multiCodec &&
+                      _preferredCodec != 'Preferred Codec' &&
+                      ['av1', 'vp9'].contains(_preferredCodec.toLowerCase()))
+                    Padding(
+                        padding: const EdgeInsets.only(bottom: 25),
+                        child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Backup Codec:'),
+                              DropdownButton<String>(
+                                value: _backupCodec,
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Colors.blue,
+                                ),
+                                elevation: 16,
+                                style: const TextStyle(color: Colors.blue),
+                                underline: Container(
+                                  height: 2,
+                                  color: Colors.blueAccent,
+                                ),
+                                onChanged: (String? value) {
+                                  // This is called when the user selects an item.
+                                  setState(() {
+                                    _backupCodec = value!;
+                                  });
+                                },
+                                items: [
+                                  'Backup Codec',
+                                  'VP8',
+                                  'H264'
+                                ].map<DropdownMenuItem<String>>((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                              )
+                            ])),
                   ElevatedButton(
                     onPressed: _busy ? null : () => _connect(context),
                     child: Row(
