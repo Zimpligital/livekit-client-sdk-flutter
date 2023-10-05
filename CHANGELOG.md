@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## 1.5.2
+
+* Non-functional update, forcing the versions in 
+  `'ios/livekit_client.podspec', 'macos/livekit_client.podspec', 'lib/src/livekit.dart'` 
+  consistent with pubspec.yaml
+
+## 1.5.1
+
+* Fixed Renderer bug for Windows.
+* E2EE Improvements.
+* Fixed error when sending events on non-platform thread [iOS/macOS].
+
+## 1.5.0
+
+* Update default bitrates according to VMAF guide
+* Support multi-codec simulcast.
+* Support SVC publishing with AV1/VP9.
+* More robustness for E2EE.
+* Configurable Audio Modes for Android.
+
 ## 1.4.3
 
 * Fix: remove js_bindings and use the built-in AudioContext for js interop to support flutter 3.13.0.

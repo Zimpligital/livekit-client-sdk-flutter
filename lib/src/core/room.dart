@@ -165,11 +165,12 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     RoomOptions? roomOptions,
     FastConnectOptions? fastConnectOptions,
   }) {
-    if (roomOptions?.e2eeOptions != null) {
+    roomOptions ??= this.roomOptions;
+    if (roomOptions.e2eeOptions != null) {
       if (!lkPlatformSupportsE2EE()) {
         throw LiveKitE2EEException('E2EE is not supported on this platform');
       }
-      _e2eeManager = E2EEManager(roomOptions!.e2eeOptions!.keyProvider);
+      _e2eeManager = E2EEManager(roomOptions.e2eeOptions!.keyProvider);
       _e2eeManager!.setup(this);
     }
     return engine.connect(
@@ -254,6 +255,11 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         _getOrCreateRemoteParticipant(info.sid, info);
       }
 
+      if (e2eeManager != null && event.response.sifTrailer.isNotEmpty) {
+        e2eeManager!.keyProvider
+            .setSifTrailer(Uint8List.fromList(event.response.sifTrailer));
+      }
+
       logger.fine('Room Connect completed');
     })
     ..on<SignalParticipantUpdateEvent>(
@@ -284,13 +290,13 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         }
         var videoTrack = publication.track as LocalVideoTrack;
         final newCodecs = await videoTrack.setPublishingCodecs(
-            event.subscribedCodecs, publication);
+            event.subscribedCodecs, videoTrack);
         for (var codec in newCodecs) {
           if (isBackupCodec(codec)) {
             logger.info(
                 'publishing backup codec ${codec} for ${publication.track?.sid}');
-            await localParticipant?.publishAdditionalCodecForTrack(
-                videoTrack, codec, roomOptions.defaultVideoPublishOptions);
+            await localParticipant?.publishAdditionalCodecForPublication(
+                publication, codec);
           }
         }
       } else if (event.subscribedQualities.isNotEmpty) {
