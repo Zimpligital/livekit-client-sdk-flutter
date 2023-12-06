@@ -34,7 +34,6 @@ import '../participant/participant.dart';
 import '../participant/remote.dart';
 import '../proto/livekit_models.pb.dart' as lk_models;
 import '../proto/livekit_rtc.pb.dart' as lk_rtc;
-import '../support/app_state.dart';
 import '../support/disposable.dart';
 import '../support/platform.dart';
 import '../track/local/audio.dart';
@@ -109,8 +108,6 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
   //
   late EventsListener<SignalEvent> _signalListener;
 
-  StreamSubscription<String>? _appCloseSubscription;
-
   Room({
     ConnectOptions connectOptions = const ConnectOptions(),
     RoomOptions roomOptions = const RoomOptions(),
@@ -123,13 +120,6 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     //
     _engineListener = this.engine.createListener();
     _setUpEngineListeners();
-
-    if (!kIsWeb && !lkPlatformIsTest()) {
-      _appCloseSubscription =
-          AppStateListener.instance.onWindowShouldClose.stream.listen((event) {
-        disconnect();
-      });
-    }
 
     _signalListener = this.engine.signalClient.createListener();
     _setUpSignalListeners();
@@ -153,8 +143,6 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
       await _engineListener.dispose();
       // dispose the engine
       await this.engine.dispose();
-      // dispose the app state listener
-      await _appCloseSubscription?.cancel();
     });
   }
 
@@ -165,11 +153,12 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     RoomOptions? roomOptions,
     FastConnectOptions? fastConnectOptions,
   }) {
-    if (roomOptions?.e2eeOptions != null) {
+    roomOptions ??= this.roomOptions;
+    if (roomOptions.e2eeOptions != null) {
       if (!lkPlatformSupportsE2EE()) {
         throw LiveKitE2EEException('E2EE is not supported on this platform');
       }
-      _e2eeManager = E2EEManager(roomOptions!.e2eeOptions!.keyProvider);
+      _e2eeManager = E2EEManager(roomOptions.e2eeOptions!.keyProvider);
       _e2eeManager!.setup(this);
     }
     return engine.connect(
@@ -254,6 +243,11 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         _getOrCreateRemoteParticipant(info.sid, info);
       }
 
+      if (e2eeManager != null && event.response.sifTrailer.isNotEmpty) {
+        e2eeManager!.keyProvider
+            .setSifTrailer(Uint8List.fromList(event.response.sifTrailer));
+      }
+
       logger.fine('Room Connect completed');
     })
     ..on<SignalParticipantUpdateEvent>(
@@ -284,13 +278,13 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         }
         var videoTrack = publication.track as LocalVideoTrack;
         final newCodecs = await videoTrack.setPublishingCodecs(
-            event.subscribedCodecs, publication);
+            event.subscribedCodecs, videoTrack);
         for (var codec in newCodecs) {
           if (isBackupCodec(codec)) {
             logger.info(
                 'publishing backup codec ${codec} for ${publication.track?.sid}');
-            await localParticipant?.publishAdditionalCodecForTrack(
-                videoTrack, codec, roomOptions.defaultVideoPublishOptions);
+            await localParticipant?.publishAdditionalCodecForPublication(
+                publication, codec);
           }
         }
       } else if (event.subscribedQualities.isNotEmpty) {

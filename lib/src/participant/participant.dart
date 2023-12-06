@@ -115,6 +115,9 @@ abstract class Participant<T extends TrackPublication>
     }
   }
 
+  bool get isEncrypted => [...audioTracks, ...videoTracks]
+      .every((track) => track.encryptionType != EncryptionType.kNone);
+
   @internal
   bool get hasInfo => _participantInfo != null;
 
@@ -161,6 +164,7 @@ abstract class Participant<T extends TrackPublication>
     if (changed) {
       [events, room.events].emit(ParticipantMetadataUpdatedEvent(
         participant: this,
+        metadata: md,
       ));
     }
   }

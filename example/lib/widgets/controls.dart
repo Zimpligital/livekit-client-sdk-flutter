@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -203,7 +202,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
 
   void _disableScreenShare() async {
     await participant.setScreenShareEnabled(false);
-    if (Platform.isAndroid) {
+    if (lkPlatformIs(PlatformType.android)) {
       // Android specific
       try {
         //   await FlutterBackground.disableBackgroundExecution();
@@ -238,6 +237,16 @@ class _ControlsWidgetState extends State<ControlsWidget> {
 
       if (SimulateScenarioResult.e2eeKeyRatchet == result) {
         await widget.room.e2eeManager?.ratchetKey();
+      }
+
+      if (SimulateScenarioResult.participantMetadata == result) {
+        widget.room.localParticipant?.setMetadata(
+            'new metadata ${widget.room.localParticipant?.identity}');
+      }
+
+      if (SimulateScenarioResult.participantName == result) {
+        widget.room.localParticipant
+            ?.setName('new name for ${widget.room.localParticipant?.identity}');
       }
 
       await widget.room.sendSimulateScenario(
