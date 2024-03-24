@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
 
+import '../logger.dart';
+
 const defaultRatchetSalt = 'LKFrameEncryptionKey';
 const defaultMagicBytes = 'LK-ROCKS';
-const defaultRatchetWindowSize = 0;
+const defaultRatchetWindowSize = 16;
 const defaultFailureTolerance = -1;
 
 class KeyInfo {
@@ -37,6 +40,7 @@ abstract class KeyProvider {
   Future<Uint8List> ratchetSharedKey({int? keyIndex});
   Future<Uint8List> exportSharedKey({int? keyIndex});
   Future<void> setKey(String key, {String? participantId, int? keyIndex});
+  Future<void> setRawKey(Uint8List key, {String? participantId, int? keyIndex});
   Future<Uint8List> ratchetKey(String participantId, int? keyIndex);
   Future<Uint8List> exportKey(String participantId, int? keyIndex);
   Future<void> setSifTrailer(Uint8List trailer);
@@ -45,6 +49,11 @@ abstract class KeyProvider {
 
 class BaseKeyProvider implements KeyProvider {
   final Map<String, Map<int, Uint8List>> _keys = {};
+
+  int getLatestIndex(String participantId) {
+    return _keys[participantId]?.keys.last ?? 0;
+  }
+
   Uint8List? _sharedKey;
   final rtc.KeyProviderOptions options;
   final rtc.KeyProvider _keyProvider;
@@ -113,8 +122,7 @@ class BaseKeyProvider implements KeyProvider {
   Future<void> setKey(String key,
       {String? participantId, int? keyIndex}) async {
     if (options.sharedKey) {
-      _sharedKey = Uint8List.fromList(key.codeUnits);
-      return;
+      return setSharedKey(key, keyIndex: keyIndex);
     }
     final keyInfo = KeyInfo(
       participantId: participantId ?? '',
@@ -124,10 +132,19 @@ class BaseKeyProvider implements KeyProvider {
     return _setKey(keyInfo);
   }
 
+  @override
+  Future<void> setRawKey(Uint8List key,
+      {String? participantId, int? keyIndex}) async {
+    return setKey(String.fromCharCodes(key),
+        participantId: participantId, keyIndex: keyIndex);
+  }
+
   Future<void> _setKey(KeyInfo keyInfo) async {
     if (!_keys.containsKey(keyInfo.participantId)) {
       _keys[keyInfo.participantId] = {};
     }
+    logger.info(
+        '_setKey for ${keyInfo.participantId}, idx: ${keyInfo.keyIndex}, key: ${base64Encode(keyInfo.key)}');
     _keys[keyInfo.participantId]![keyInfo.keyIndex] = keyInfo.key;
     await _keyProvider.setKey(
       participantId: keyInfo.participantId,
