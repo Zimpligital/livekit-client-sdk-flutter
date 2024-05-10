@@ -24,7 +24,7 @@ import '../track/options.dart';
 import '../track/track.dart';
 import '../types/other.dart';
 
-abstract class InternalEvent implements LiveKitEvent {}
+mixin InternalEvent implements LiveKitEvent {}
 
 @internal
 abstract class EnginePeerStateUpdatedEvent with EngineEvent implements InternalEvent {
@@ -143,8 +143,8 @@ class SignalReconnectResponseEvent with SignalEvent implements InternalEvent {
 
 @internal
 class SignalConnectivityChangedEvent with SignalEvent, InternalEvent {
-  final ConnectivityResult oldState;
-  final ConnectivityResult state;
+  final List<ConnectivityResult> oldState;
+  final List<ConnectivityResult> state;
   const SignalConnectivityChangedEvent({
     required this.oldState,
     required this.state,

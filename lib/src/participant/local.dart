@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
@@ -88,8 +90,6 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
 
     track.lastPublishOptions = publishOptions;
 
-    await track.start();
-
     final transceiverInit = rtc.RTCRtpTransceiverInit(
       direction: rtc.TransceiverDirection.SendOnly,
       sendEncodings: [
@@ -129,6 +129,8 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
       publication: pub,
     ));
 
+    await track.start();
+
     return pub;
   }
 
@@ -167,8 +169,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
       }
 
       // vp9 svc with screenshare has problem to encode, always use L1T3 here
-      if (track.source == TrackSource.screenShareVideo &&
-          publishOptions.videoCodec.toLowerCase() == 'vp9') {
+      if (track.source == TrackSource.screenShareVideo) {
         publishOptions = publishOptions.copyWith(
           scalabilityMode: 'L1T3',
         );
@@ -539,6 +540,12 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
       CameraCaptureOptions? cameraCaptureOptions,
       ScreenShareCaptureOptions? screenShareCaptureOptions}) async {
     logger.fine('setSourceEnabled(source: $source, enabled: $enabled)');
+
+    if (TrackSource.screenShareVideo == source && lkPlatformIsWebMobile()) {
+      throw TrackCreateException(
+          'Screen sharing is not supported on mobile devices');
+    }
+
     final publication = getTrackPublicationBySource(source);
     if (publication != null) {
       if (enabled) {

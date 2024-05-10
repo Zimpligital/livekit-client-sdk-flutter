@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// ignore_for_file: deprecated_member_use_from_same_package
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -685,7 +687,7 @@ class Engine extends Disposable with EventsEmittable<EngineEvent> {
         logger.fine('no internet connection, waiting...');
         await signalClient.events.waitFor<SignalConnectivityChangedEvent>(
           duration: connectOptions.timeouts.connection * 10,
-          filter: (event) => event.state != ConnectivityResult.none,
+          filter: (event) => !event.state.contains(ConnectivityResult.none),
           onTimeout: () => throw ConnectException(
               'attemptReconnect: Timed out waiting for SignalConnectivityChangedEvent'),
         );
@@ -829,6 +831,7 @@ class Engine extends Disposable with EventsEmittable<EngineEvent> {
   void sendSyncState({
     required lk_rtc.UpdateSubscription subscription,
     required Iterable<lk_rtc.TrackPublishedResponse>? publishTracks,
+    required List<String> trackSidsDisabled,
   }) async {
     final previousAnswer =
         (await subscriber?.pc.getLocalDescription())?.toPBType();
@@ -837,6 +840,7 @@ class Engine extends Disposable with EventsEmittable<EngineEvent> {
       subscription: subscription,
       publishTracks: publishTracks,
       dataChannelInfo: dataChannelInfo(),
+      trackSidsDisabled: trackSidsDisabled,
     );
   }
 
@@ -1051,7 +1055,9 @@ extension EngineInternalMethods on Engine {
 
   Future<void> setPreferredCodec(
       rtc.RTCRtpTransceiver transceiver, String kind, String videoCodec) async {
-    var caps = await rtc.getRtpSenderCapabilities(kind);
+    // when setting codec preferences, the capabilites need to be read from
+    // the RTCRtpReceiver
+    var caps = await rtc.getRtpReceiverCapabilities(kind);
     if (caps.codecs == null) return;
 
     logger.fine('get capabilities ${caps.codecs}');

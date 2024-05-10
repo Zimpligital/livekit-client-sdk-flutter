@@ -1,5 +1,34 @@
 # CHANGELOG
 
+## 2.1.4
+
+* bump version of flutter-webrtc with privacy manifest files
+
+## 2.1.3
+
+* upgrade to connectivity plus 6.x.
+* bump dart_webrtc to 1.4.3.
+
+## 2.1.2
+
+* fix: Expose keyRingSize/discardFrameWhenCryptorNotReady parameters for KeyProvider
+
+## 2.1.1
+
+* update to package:web (#484)
+* feat: add keyRingSize/discardFrameWhenCryptorNotReady to KeyProviderOptions. (#493)
+
+## 2.1.0
+
+* Fix: bug for sync state (#491)
+
+## 2.0.3
+
+* Read capabilities from RtcRTPReceiver instead of from sender. (#488)
+* Update screenshare logic for svc publishing (#487)
+* Prevent screen-sharing on flutter web mobile. (#486)
+* feat: add setKey variant, setRawKey (#482)
+
 ## 2.0.2
 
 * Add Android 14 media projection perm to docs (#470)

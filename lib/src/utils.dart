@@ -336,27 +336,20 @@ class Utils {
     var connectivityResult = await (Connectivity().checkConnectivity());
     // wifi, wired, cellular, vpn, empty if not known
     String networkType = 'empty';
-    switch (connectivityResult) {
-      case ConnectivityResult.mobile:
-        networkType = 'cellular';
-        break;
-      case ConnectivityResult.wifi:
-        networkType = 'wifi';
-        break;
-      case ConnectivityResult.bluetooth:
-        networkType = 'bluetooth';
-        break;
-      case ConnectivityResult.ethernet:
-        networkType = 'wired';
-        break;
-      case ConnectivityResult.other:
-      case ConnectivityResult.vpn:
-        //TODO: will livekit-server handle vpn and other types correctly?
-        //  networkType = 'vpn';
-        break;
-      case ConnectivityResult.none:
-        networkType = 'empty';
-        break;
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      networkType = 'empty';
+    } else if (connectivityResult.contains(ConnectivityResult.mobile)) {
+      networkType = 'cellular';
+    } else if (connectivityResult.contains(ConnectivityResult.wifi)) {
+      networkType = 'wifi';
+    } else if (connectivityResult.contains(ConnectivityResult.ethernet)) {
+      networkType = 'wired';
+    } else if (connectivityResult.contains(ConnectivityResult.bluetooth)) {
+      networkType = 'bluetooth';
+    } else if (connectivityResult.contains(ConnectivityResult.other)) {
+      networkType = 'other';
+    } else if (connectivityResult.contains(ConnectivityResult.vpn)) {
+      networkType = 'vpn';
     }
     return networkType;
   }
@@ -432,23 +425,23 @@ class Utils {
 
     if (scalabilityMode != null && isSVCCodec(options.videoCodec)) {
       logger.info('using svc with scalabilityMode ${scalabilityMode}');
-
-      //final sm = ScalabilityMode(scalabilityMode);
-
-      List<rtc.RTCRtpEncoding> encodings = [videoEncoding.toRTCRtpEncoding()];
-      /*
-      if (sm.spatial > 3) {
-        throw Exception('unsupported scalabilityMode: ${scalabilityMode}');
+      List<rtc.RTCRtpEncoding> encodings = [];
+      if (lkPlatformIs(PlatformType.web) &&
+          (lkBrowser() == BrowserType.safari ||
+              lkBrowser() == BrowserType.chrome &&
+                  lkBrowserVersion().major < 113)) {
+        final sm = ScalabilityMode(scalabilityMode);
+        for (var i = 0; i < sm.spatial; i += 1) {
+          // in legacy SVC, scaleResolutionDownBy cannot be set
+          encodings.add(rtc.RTCRtpEncoding(
+            rid: videoRids[2 - i],
+            maxBitrate: videoEncoding.maxBitrate ~/ math.pow(3, i),
+            maxFramerate: original.encoding.maxFramerate,
+          ));
+        }
+      } else {
+        encodings.add(videoEncoding.toRTCRtpEncoding());
       }
-      for (int i = 0; i < sm.spatial; i += 1) {
-        encodings.add(rtc.RTCRtpEncoding(
-          rid: videoRids[2 - i],
-          maxBitrate: videoEncoding.maxBitrate ~/ math.pow(3, i),
-          maxFramerate: videoEncoding.maxFramerate,
-          scaleResolutionDownBy: null,
-          numTemporalLayers: sm.temporal.toInt(),
-        ));
-      }*/
       encodings[0].scalabilityMode = scalabilityMode;
       logger.fine('encodings $encodings');
       return encodings;

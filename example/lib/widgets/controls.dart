@@ -18,8 +18,8 @@ class ControlsWidget extends StatefulWidget {
   const ControlsWidget(
     this.room,
     this.participant, {
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<StatefulWidget> createState() => _ControlsWidgetState();
@@ -197,6 +197,13 @@ class _ControlsWidgetState extends State<ControlsWidget> {
       await participant.publishVideoTrack(track);
       return;
     }
+
+    if (lkPlatformIsWebMobile()) {
+      await context
+          .showErrorDialog('Screen share is not supported on mobile web');
+      return;
+    }
+
     await participant.setScreenShareEnabled(true, captureScreenAudio: true);
   }
 
@@ -333,7 +340,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
                           ),
                           onTap: () => _selectAudioInput(device),
                         );
-                      }).toList()
+                      })
                   ];
                 },
               )
@@ -377,7 +384,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
                         ),
                         onTap: () => _selectAudioOutput(device),
                       );
-                    }).toList()
+                    })
                 ];
               },
             ),
@@ -426,7 +433,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
                         ),
                         onTap: () => _selectVideoInput(device),
                       );
-                    }).toList()
+                    })
                 ];
               },
             )
