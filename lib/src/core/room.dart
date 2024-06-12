@@ -347,10 +347,19 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     })
     ..on<SignalRemoteMuteTrackEvent>((event) async {
       final publication = localParticipant?.trackPublications[event.sid];
+
+      final stopOnMute = switch (publication?.source) {
+        TrackSource.camera =>
+          roomOptions.defaultCameraCaptureOptions.stopCameraCaptureOnMute,
+        TrackSource.microphone =>
+          roomOptions.defaultAudioCaptureOptions.stopAudioCaptureOnMute,
+        _ => true,
+      };
+
       if (event.muted) {
-        await publication?.mute();
+        await publication?.mute(stopOnMute: stopOnMute);
       } else {
-        await publication?.unmute();
+        await publication?.unmute(stopOnMute: stopOnMute);
       }
     })
     ..on<SignalTrackUnpublishedEvent>((event) async {
@@ -427,6 +436,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     ..on<EngineActiveSpeakersUpdateEvent>(
         (event) => _onEngineActiveSpeakersUpdateEvent(event.speakers))
     ..on<EngineDataPacketReceivedEvent>(_onDataMessageEvent)
+    ..on<EngineTranscriptionReceivedEvent>(_onTranscriptionEvent)
     ..on<AudioPlaybackStarted>((event) {
       _handleAudioPlaybackStarted();
     })
@@ -672,6 +682,37 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         streamState: update.state.toLKType(),
       ));
     }
+  }
+
+  void _onTranscriptionEvent(EngineTranscriptionReceivedEvent event) {
+    final participant = getParticipantByIdentity(
+        event.transcription.transcribedParticipantIdentity);
+    if (participant == null) {
+      return;
+    }
+
+    final publication =
+        participant.getTrackPublicationBySid(event.transcription.trackId);
+
+    var segments = event.transcription.segments.map((e) {
+      return TranscriptionSegment(
+        text: e.text,
+        id: e.id,
+        startTime: DateTime.fromMillisecondsSinceEpoch(e.startTime.toInt()),
+        endTime: DateTime.fromMillisecondsSinceEpoch(e.endTime.toInt()),
+        isFinal: e.final_5,
+        language: e.language,
+      );
+    }).toList();
+
+    final transcription = TranscriptionEvent(
+      participant: participant,
+      publication: publication,
+      segments: segments,
+    );
+
+    participant.events.emit(transcription);
+    events.emit(transcription);
   }
 
   void _onDataMessageEvent(EngineDataPacketReceivedEvent dataPacketEvent) {
