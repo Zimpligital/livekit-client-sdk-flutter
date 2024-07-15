@@ -13,7 +13,9 @@
 # LiveKit Flutter SDK
 
 <!--BEGIN_DESCRIPTION-->
+
 Use this SDK to add real-time video, audio and data features to your Flutter app. By connecting to a self- or cloud-hosted <a href="https://livekit.io/">LiveKit</a> server, you can quickly build applications like interactive live streaming or video calls with just a few lines of code.
+
 <!--END_DESCRIPTION-->
 
 This package is published to pub.dev as [livekit_client](https://pub.dev/packages/livekit_client).
@@ -22,25 +24,20 @@ This package is published to pub.dev as [livekit_client](https://pub.dev/package
 
 More Docs and guides are available at [https://docs.livekit.io](https://docs.livekit.io)
 
-## Current supported features
+## Supported platforms
 
-| Feature | Subscribe/Publish | Simulcast | Background audio | Screen sharing | End to End Encryption | Multi Codec Simulcast |
-| :-----: | :---------------: | :-------: | :--------------: | :------------: | :-------------------: | :-------------------: |
-|   iOS   |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
-| Android |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
-|   Mac   |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
-| Windows |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
-| Linux   |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
+LiveKit client SDK for Flutter is designed to work across all platforms supported by Flutter:
 
-🟢 = Available
-
-🟡 = Coming soon (Work in progress)
-
-🔴 = Not currently available (Possibly in the future)
+- Android
+- iOS
+- Web
+- macOS
+- Windows
+- Linux
 
 ## Example app
 
-We built a multi-user conferencing app as an example in the [example/](example/) folder. You can join the same room from any supported LiveKit clients.
+We built a multi-user conferencing app as an example in the [example/](example/) folder. LiveKit is compatible cross-platform: you could join the same room using any of our supported realtime SDKs.
 
 Online demo: https://livekit.github.io/client-sdk-flutter/
 
@@ -155,7 +152,7 @@ void main() async {
 
 #### Audio Modes
 
-By default, we use the `communication` audio mode on Android which works best for two-way voice communication. 
+By default, we use the `communication` audio mode on Android which works best for two-way voice communication.
 
 If your app is media playback oriented and does not need the use of the device's microphone, you can use the `media`
 audio mode which will provide better audio quality.
@@ -221,7 +218,9 @@ room.localParticipant.setScreenShareEnabled(true);
 
 #### Android
 
-On Android, you would have to define a foreground service in your AndroidManifest.xml.
+On Android, you will have to use a [media projection foreground service](https://developer.android.com/develop/background-work/services/fg-service-types#media-projection).
+
+In our example, we use the `flutter_background` package to handle this. In the app's AndroidManifest.xml file, declare the service with the appropriate types and permissions as following:
 
 ```xml title="AndroidManifest.xml"
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -238,6 +237,8 @@ On Android, you would have to define a foreground service in your AndroidManifes
   </application>
 </manifest>
 ```
+
+Before starting the background service and enabling screen share, you **must** call `Helper.requestCapturePermission()` from `flutter_webrtc`, and only proceed if it returns true.
 
 #### iOS
 
@@ -489,7 +490,9 @@ Apache License 2.0
 A huge thank you to [flutter-webrtc](https://github.com/flutter-webrtc/flutter-webrtc) for making it possible to use WebRTC in Flutter.
 
 <!--BEGIN_REPO_NAV-->
+
 <br/><table>
+
 <thead><tr><th colspan="2">LiveKit Ecosystem</th></tr></thead>
 <tbody>
 <tr><td>Real-time SDKs</td><td><a href="https://github.com/livekit/components-js">React Components</a> · <a href="https://github.com/livekit/client-sdk-js">Browser</a> · <a href="https://github.com/livekit/client-sdk-swift">iOS/macOS</a> · <a href="https://github.com/livekit/client-sdk-android">Android</a> · <b>Flutter</b> · <a href="https://github.com/livekit/client-sdk-react-native">React Native</a> · <a href="https://github.com/livekit/rust-sdks">Rust</a> · <a href="https://github.com/livekit/node-sdks">Node.js</a> · <a href="https://github.com/livekit/python-sdks">Python</a> · <a href="https://github.com/livekit/client-sdk-unity-web">Unity (web)</a> · <a href="https://github.com/livekit/client-sdk-unity">Unity (beta)</a></td></tr><tr></tr>
