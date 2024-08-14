@@ -128,8 +128,15 @@ class Hardware {
         NativeAudioConfiguration? config;
         if (lkPlatformIs(PlatformType.iOS)) {
           // Only iOS for now...
-          config = await onConfigureNativeAudio.call(audioTrackState);
-          logger.fine('configuring for ${audioTrackState} using ${config}...');
+          NativeAudioConfiguration config = NativeAudioConfiguration(
+            appleAudioCategory: AppleAudioCategory.playAndRecord,
+            appleAudioCategoryOptions: {
+              AppleAudioCategoryOption.allowBluetooth,
+              AppleAudioCategoryOption.mixWithOthers,
+            },
+            appleAudioMode:
+            enable ? AppleAudioMode.videoChat : AppleAudioMode.voiceChat,
+          );
           try {
             await Native.configureAudio(config);
           } catch (error) {
