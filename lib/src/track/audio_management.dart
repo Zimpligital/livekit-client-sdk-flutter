@@ -150,52 +150,38 @@ AudioTrackState _computeAudioTrackState() {
 
 Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
     AudioTrackState state) async {
+  //
+  if (state == AudioTrackState.remoteOnly &&
+      Hardware.instance.preferSpeakerOutput) {
+    return NativeAudioConfiguration(
+      appleAudioCategory: AppleAudioCategory.playback,
+      appleAudioCategoryOptions: {
+        AppleAudioCategoryOption.mixWithOthers,
+      },
+      appleAudioMode: AppleAudioMode.spokenAudio,
+    );
+  } else if ([
+        AudioTrackState.localOnly,
+        AudioTrackState.localAndRemote,
+      ].contains(state) ||
+      (state == AudioTrackState.remoteOnly &&
+          !Hardware.instance.preferSpeakerOutput)) {
+    return NativeAudioConfiguration(
+      appleAudioCategory: AppleAudioCategory.playAndRecord,
+      appleAudioCategoryOptions: {
+        AppleAudioCategoryOption.allowBluetooth,
+        AppleAudioCategoryOption.allowBluetoothA2DP,
+        AppleAudioCategoryOption.allowAirPlay,
+      },
+      appleAudioMode: Hardware.instance.preferSpeakerOutput
+          ? AppleAudioMode.videoChat
+          : AppleAudioMode.voiceChat,
+    );
+  }
+
   return NativeAudioConfiguration(
-    appleAudioCategory: AppleAudioCategory.playAndRecord,
-    appleAudioCategoryOptions: {
-      AppleAudioCategoryOption.allowBluetooth,
-      AppleAudioCategoryOption.mixWithOthers,
-    },
-    appleAudioMode: Hardware.instance.preferSpeakerOutput
-        ? AppleAudioMode.videoChat
-        : AppleAudioMode.voiceChat,
+    appleAudioCategory: AppleAudioCategory.soloAmbient,
+    appleAudioCategoryOptions: {},
+    appleAudioMode: AppleAudioMode.default_,
   );
-
-  // if (state == AudioTrackState.remoteOnly) {
-  //   return NativeAudioConfiguration(
-  //     appleAudioCategory: AppleAudioCategory.playAndRecord,
-  //     appleAudioCategoryOptions: {
-  //       AppleAudioCategoryOption.allowBluetooth,
-  //       AppleAudioCategoryOption.mixWithOthers,
-  //     },
-  //     appleAudioMode: Hardware.instance.preferSpeakerOutput
-  //         ? AppleAudioMode.default_
-  //         : AppleAudioMode.voiceChat,
-  //   );
-  // } else if ([
-  //   AudioTrackState.localOnly,
-  //   AudioTrackState.localAndRemote,
-  // ].contains(state)) {
-  //   return NativeAudioConfiguration(
-  //     appleAudioCategory: AppleAudioCategory.playAndRecord,
-  //     appleAudioCategoryOptions: {
-  //       AppleAudioCategoryOption.allowBluetooth,
-  //       AppleAudioCategoryOption.mixWithOthers,
-  //     },
-  //     appleAudioMode: Hardware.instance.preferSpeakerOutput
-  //         ? AppleAudioMode.videoChat
-  //         : AppleAudioMode.voiceChat,
-  //   );
-  // }
-
-  // return NativeAudioConfiguration(
-  //   appleAudioCategory: AppleAudioCategory.playAndRecord,
-  //   appleAudioCategoryOptions: {
-  //     AppleAudioCategoryOption.allowBluetooth,
-  //     AppleAudioCategoryOption.mixWithOthers,
-  //   },
-  //   appleAudioMode: Hardware.instance.preferSpeakerOutput
-  //       ? AppleAudioMode.default_
-  //       : AppleAudioMode.voiceChat,
-  // );
 }

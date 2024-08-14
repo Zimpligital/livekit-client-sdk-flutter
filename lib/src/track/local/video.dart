@@ -17,6 +17,7 @@ import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
 
+import 'package:livekit_client/src/extensions.dart';
 import '../../events.dart';
 import '../../exceptions.dart';
 import '../../logger.dart';
@@ -87,9 +88,16 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
       num totalBitrate = 0;
       statsMap.forEach((key, s) {
         final prev = prevStats![key];
-        var bitRateForlayer = computeBitrateForSenderStats(s, prev).toInt();
-        _bitrateFoLayers[key] = bitRateForlayer;
-        totalBitrate += bitRateForlayer;
+        if (prev == null) {
+          return;
+        }
+        try {
+          var bitRateForlayer = computeBitrateForSenderStats(s, prev).toInt();
+          _bitrateFoLayers[key] = bitRateForlayer;
+          totalBitrate += bitRateForlayer;
+        } catch (e) {
+          logger.warning('Failed to compute bitrate for layer: $e');
+        }
       });
       _currentBitrate = totalBitrate;
       events.emit(VideoSenderStatsEvent(
@@ -482,5 +490,14 @@ extension LocalVideoTrackExt on LocalVideoTrack {
 
     simulcastCodecs[codec] = simulcastCodecInfo;
     return simulcastCodecInfo;
+  }
+
+  void setDegradationPreference(DegradationPreference preference) {
+    final params = sender?.parameters;
+    if (params == null) {
+      return;
+    }
+    params.degradationPreference = preference.toRTCType();
+    sender?.setParameters(params);
   }
 }

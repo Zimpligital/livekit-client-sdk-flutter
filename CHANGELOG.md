@@ -1,5 +1,51 @@
 # CHANGELOG
 
+## 2.2.4
+
+* fix bug for PlatformView on iOS (#570)
+* Deprecated `connectOptions` in `Room` constructor.
+* Deprecated `roomOptions` int `room.connect`.
+* Added `screenShareEncoding` for `VideoPublishOptions`.
+* Change `CameraCaptureOptions.params.encoding` to optional.
+   It is recommended to use `VideoPublishOptions.videoEncoding/screenShareEncoding`
+   to control the video sending bitrate.
+
+## 2.2.3
+
+* add PlatformView for iOS (#509)
+* update lints to 4.0.0. (#563)
+
+## 2.2.2
+
+* feat: expose DegradationPreference for publish options. (#556)
+* fix room.disconnect issue. (#559)
+* fix: use getSettings() to get actual dimensions for mobile (#560)
+* Add support for participant attributes (#558)
+
+## 2.2.1
+
+* fix: fix crash for windows
+* feat: bump version for flutter-webrtc.
+* fix: ratchet on a single frame until ratchetWindowSize (#544)
+* fix: fix mediaStreamTrack.getSettings() on Flutter Web.
+
+## 2.2.0
+
+* feat: add Transcription Event. (#531)
+* feat: Expose Participant.Kind. (#532)
+* fix: ignore unable to parse frames completely (#530)
+
+## 2.1.6
+
+* Framecryptor decrypting fixes (#520)
+* feat: add voiceIsolation support (#523)
+* fix: audio session control for ios.
+
+## 2.1.5
+
+fix: audio devcie ids consistency (#513)
+feat: provide option to skip stop/restartTrack for mute/unmute (#516)
+
 ## 2.1.4
 
 * bump version of flutter-webrtc with privacy manifest files

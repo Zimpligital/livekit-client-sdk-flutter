@@ -111,12 +111,12 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
   late EventsListener<SignalEvent> _signalListener;
 
   Room({
+    @Deprecated('deprecated, please use connectOptions in room.connect()')
     ConnectOptions connectOptions = const ConnectOptions(),
     RoomOptions roomOptions = const RoomOptions(),
     Engine? engine,
   }) : engine = engine ??
             Engine(
-              connectOptions: connectOptions,
               roomOptions: roomOptions,
             ) {
     //
@@ -152,16 +152,18 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     String url,
     String token, {
     ConnectOptions? connectOptions,
+    @Deprecated('deprecated, please use roomOptions in Room constructor')
     RoomOptions? roomOptions,
     FastConnectOptions? fastConnectOptions,
-  }) {
-    roomOptions ??= this.roomOptions;
+  }) async {
+    var roomOptions = this.roomOptions;
+    connectOptions ??= ConnectOptions();
     if (roomOptions.e2eeOptions != null) {
       if (!lkPlatformSupportsE2EE()) {
         throw LiveKitE2EEException('E2EE is not supported on this platform');
       }
       _e2eeManager = E2EEManager(roomOptions.e2eeOptions!.keyProvider);
-      _e2eeManager!.setup(this);
+      await _e2eeManager!.setup(this);
 
       // Disable backup codec when e2ee is enabled
       roomOptions = roomOptions.copyWith(
@@ -172,7 +174,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
       );
     }
 
-    return engine.connect(
+    await engine.connect(
       url,
       token,
       connectOptions: connectOptions,
@@ -347,10 +349,19 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     })
     ..on<SignalRemoteMuteTrackEvent>((event) async {
       final publication = localParticipant?.trackPublications[event.sid];
+
+      final stopOnMute = switch (publication?.source) {
+        TrackSource.camera =>
+          roomOptions.defaultCameraCaptureOptions.stopCameraCaptureOnMute,
+        TrackSource.microphone =>
+          roomOptions.defaultAudioCaptureOptions.stopAudioCaptureOnMute,
+        _ => true,
+      };
+
       if (event.muted) {
-        await publication?.mute();
+        await publication?.mute(stopOnMute: stopOnMute);
       } else {
-        await publication?.unmute();
+        await publication?.unmute(stopOnMute: stopOnMute);
       }
     })
     ..on<SignalTrackUnpublishedEvent>((event) async {
@@ -427,6 +438,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     ..on<EngineActiveSpeakersUpdateEvent>(
         (event) => _onEngineActiveSpeakersUpdateEvent(event.speakers))
     ..on<EngineDataPacketReceivedEvent>(_onDataMessageEvent)
+    ..on<EngineTranscriptionReceivedEvent>(_onTranscriptionEvent)
     ..on<AudioPlaybackStarted>((event) {
       _handleAudioPlaybackStarted();
     })
@@ -481,11 +493,14 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
 
   /// Disconnects from the room, notifying server of disconnection.
   Future<void> disconnect() async {
-    if (engine.isClosed) {
+    if (engine.isClosed &&
+        engine.connectionState == ConnectionState.disconnected) {
       events.emit(RoomDisconnectedEvent(reason: DisconnectReason.unknown));
       return;
     }
     await engine.disconnect();
+    await _engineListener.waitFor<EngineDisconnectedEvent>(
+        duration: const Duration(seconds: 10));
     await _cleanUp();
   }
 
@@ -672,6 +687,37 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         streamState: update.state.toLKType(),
       ));
     }
+  }
+
+  void _onTranscriptionEvent(EngineTranscriptionReceivedEvent event) {
+    final participant = getParticipantByIdentity(
+        event.transcription.transcribedParticipantIdentity);
+    if (participant == null) {
+      return;
+    }
+
+    final publication =
+        participant.getTrackPublicationBySid(event.transcription.trackId);
+
+    var segments = event.transcription.segments.map((e) {
+      return TranscriptionSegment(
+        text: e.text,
+        id: e.id,
+        startTime: DateTime.fromMillisecondsSinceEpoch(e.startTime.toInt()),
+        endTime: DateTime.fromMillisecondsSinceEpoch(e.endTime.toInt()),
+        isFinal: e.final_5,
+        language: e.language,
+      );
+    }).toList();
+
+    final transcription = TranscriptionEvent(
+      participant: participant,
+      publication: publication,
+      segments: segments,
+    );
+
+    participant.events.emit(transcription);
+    events.emit(transcription);
   }
 
   void _onDataMessageEvent(EngineDataPacketReceivedEvent dataPacketEvent) {

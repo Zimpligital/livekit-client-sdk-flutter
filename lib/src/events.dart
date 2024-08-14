@@ -115,6 +115,21 @@ class RoomMetadataChangedEvent with RoomEvent {
   String toString() => '${runtimeType}()';
 }
 
+/// Participant's attributes have changed.
+/// Emitted by [Room].
+class ParticipantAttributesChanged with RoomEvent, ParticipantEvent {
+  final Participant participant;
+  final Map<String, String> attributes;
+
+  const ParticipantAttributesChanged({
+    required this.participant,
+    required this.attributes,
+  });
+
+  @override
+  String toString() => '${runtimeType}(participant: ${participant})';
+}
+
 /// Room recording status has changed.
 /// Emitted by [Room].
 class RoomRecordingStatusChanged with RoomEvent {
@@ -431,6 +446,35 @@ class ParticipantPermissionsUpdatedEvent with RoomEvent, ParticipantEvent {
   @override
   String toString() => '${runtimeType}'
       '(participant: ${participant}, permissions: ${permissions})';
+}
+
+class TranscriptionSegment {
+  final String id;
+  final String text;
+  final DateTime startTime;
+  final DateTime endTime;
+  final bool isFinal;
+  final String language;
+  const TranscriptionSegment({
+    required this.id,
+    required this.text,
+    required this.startTime,
+    required this.endTime,
+    required this.isFinal,
+    required this.language,
+  });
+}
+
+/// Transcription event received from the server.
+class TranscriptionEvent with RoomEvent, ParticipantEvent {
+  final Participant participant;
+  final TrackPublication<Track>? publication;
+  final List<TranscriptionSegment> segments;
+  const TranscriptionEvent({
+    required this.participant,
+    required this.publication,
+    required this.segments,
+  });
 }
 
 class ParticipantNameUpdatedEvent with RoomEvent, ParticipantEvent {

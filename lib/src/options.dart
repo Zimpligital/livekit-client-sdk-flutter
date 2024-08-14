@@ -162,6 +162,13 @@ class RoomOptions {
   }
 }
 
+enum DegradationPreference {
+  disabled,
+  maintainFramerate,
+  maintainResolution,
+  balanced,
+}
+
 class BackupVideoCodec {
   const BackupVideoCodec({
     this.enabled = true,
@@ -222,10 +229,14 @@ class VideoPublishOptions extends PublishOptions {
   /// Defaults to null.
   final VideoEncoding? videoEncoding;
 
+  final VideoEncoding? screenShareEncoding;
+
   /// Whether to enable simulcast or not.
   /// https://blog.livekit.io/an-introduction-to-webrtc-simulcast-6c5f1f6402eb
   /// Defaults to true.
   final bool simulcast;
+
+  final DegradationPreference? degradationPreference;
 
   final List<VideoParameters> videoSimulcastLayers;
 
@@ -235,37 +246,43 @@ class VideoPublishOptions extends PublishOptions {
 
   final BackupVideoCodec backupVideoCodec;
 
-  const VideoPublishOptions({
-    super.name,
-    super.stream,
-    this.videoCodec = defaultVideoCodec,
-    this.videoEncoding,
-    this.simulcast = true,
-    this.videoSimulcastLayers = const [],
-    this.screenShareSimulcastLayers = const [],
-    this.backupVideoCodec = defualtBackupVideoCodec,
-    this.scalabilityMode,
-  });
+  const VideoPublishOptions(
+      {super.name,
+      super.stream,
+      this.videoCodec = defaultVideoCodec,
+      this.videoEncoding,
+      this.screenShareEncoding,
+      this.simulcast = true,
+      this.videoSimulcastLayers = const [],
+      this.screenShareSimulcastLayers = const [],
+      this.backupVideoCodec = defualtBackupVideoCodec,
+      this.scalabilityMode,
+      this.degradationPreference});
 
   VideoPublishOptions copyWith({
     VideoEncoding? videoEncoding,
+    VideoEncoding? screenShareEncoding,
     bool? simulcast,
     List<VideoParameters>? videoSimulcastLayers,
     List<VideoParameters>? screenShareSimulcastLayers,
     String? videoCodec,
     BackupVideoCodec? backupVideoCodec,
+    DegradationPreference? degradationPreference,
     String? scalabilityMode,
     String? name,
     String? stream,
   }) =>
       VideoPublishOptions(
         videoEncoding: videoEncoding ?? this.videoEncoding,
+        screenShareEncoding: screenShareEncoding ?? this.screenShareEncoding,
         simulcast: simulcast ?? this.simulcast,
         videoSimulcastLayers: videoSimulcastLayers ?? this.videoSimulcastLayers,
         screenShareSimulcastLayers:
             screenShareSimulcastLayers ?? this.screenShareSimulcastLayers,
         videoCodec: videoCodec ?? this.videoCodec,
         backupVideoCodec: backupVideoCodec ?? this.backupVideoCodec,
+        degradationPreference:
+            degradationPreference ?? this.degradationPreference,
         scalabilityMode: scalabilityMode ?? this.scalabilityMode,
         name: name ?? this.name,
         stream: stream ?? this.stream,

@@ -459,10 +459,10 @@ class ParticipantPermission extends $pb.GeneratedMessage {
     $core.bool? canPublish,
     $core.bool? canPublishData,
     $core.bool? hidden,
-    $core.bool? recorder,
+    @$core.Deprecated('This field is deprecated.') $core.bool? recorder,
     $core.Iterable<TrackSource>? canPublishSources,
     $core.bool? canUpdateMetadata,
-    $core.bool? agent,
+    @$core.Deprecated('This field is deprecated.') $core.bool? agent,
   }) {
     final $result = create();
     if (canSubscribe != null) {
@@ -478,6 +478,7 @@ class ParticipantPermission extends $pb.GeneratedMessage {
       $result.hidden = hidden;
     }
     if (recorder != null) {
+      // ignore: deprecated_member_use_from_same_package
       $result.recorder = recorder;
     }
     if (canPublishSources != null) {
@@ -487,6 +488,7 @@ class ParticipantPermission extends $pb.GeneratedMessage {
       $result.canUpdateMetadata = canUpdateMetadata;
     }
     if (agent != null) {
+      // ignore: deprecated_member_use_from_same_package
       $result.agent = agent;
     }
     return $result;
@@ -595,15 +597,20 @@ class ParticipantPermission extends $pb.GeneratedMessage {
   void clearHidden() => clearField(7);
 
   /// indicates it's a recorder instance
+  /// deprecated: use ParticipantInfo.kind instead
+  @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(8)
   $core.bool get recorder => $_getBF(4);
+  @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(8)
   set recorder($core.bool v) {
     $_setBool(4, v);
   }
 
+  @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(8)
   $core.bool hasRecorder() => $_has(4);
+  @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(8)
   void clearRecorder() => clearField(8);
 
@@ -611,7 +618,7 @@ class ParticipantPermission extends $pb.GeneratedMessage {
   @$pb.TagNumber(9)
   $core.List<TrackSource> get canPublishSources => $_getList(5);
 
-  /// indicates that participant can update own metadata
+  /// indicates that participant can update own metadata and attributes
   @$pb.TagNumber(10)
   $core.bool get canUpdateMetadata => $_getBF(6);
   @$pb.TagNumber(10)
@@ -625,15 +632,20 @@ class ParticipantPermission extends $pb.GeneratedMessage {
   void clearCanUpdateMetadata() => clearField(10);
 
   /// indicates that participant is an agent
+  /// deprecated: use ParticipantInfo.kind instead
+  @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(11)
   $core.bool get agent => $_getBF(7);
+  @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(11)
   set agent($core.bool v) {
     $_setBool(7, v);
   }
 
+  @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(11)
   $core.bool hasAgent() => $_has(7);
+  @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(11)
   void clearAgent() => clearField(11);
 }
@@ -652,6 +664,7 @@ class ParticipantInfo extends $pb.GeneratedMessage {
     $core.String? region,
     $core.bool? isPublisher,
     ParticipantInfo_Kind? kind,
+    $core.Map<$core.String, $core.String>? attributes,
   }) {
     final $result = create();
     if (sid != null) {
@@ -690,6 +703,9 @@ class ParticipantInfo extends $pb.GeneratedMessage {
     if (kind != null) {
       $result.kind = kind;
     }
+    if (attributes != null) {
+      $result.attributes.addAll(attributes);
+    }
     return $result;
   }
   ParticipantInfo._() : super();
@@ -726,6 +742,11 @@ class ParticipantInfo extends $pb.GeneratedMessage {
         defaultOrMaker: ParticipantInfo_Kind.STANDARD,
         valueOf: ParticipantInfo_Kind.valueOf,
         enumValues: ParticipantInfo_Kind.values)
+    ..m<$core.String, $core.String>(15, _omitFieldNames ? '' : 'attributes',
+        entryClassName: 'ParticipantInfo.AttributesEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OS,
+        packageName: const $pb.PackageName('livekit'))
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -890,6 +911,9 @@ class ParticipantInfo extends $pb.GeneratedMessage {
   $core.bool hasKind() => $_has(11);
   @$pb.TagNumber(14)
   void clearKind() => clearField(14);
+
+  @$pb.TagNumber(15)
+  $core.Map<$core.String, $core.String> get attributes => $_getMap(12);
 }
 
 class Encryption extends $pb.GeneratedMessage {
@@ -1054,6 +1078,7 @@ class TrackInfo extends $pb.GeneratedMessage {
     Encryption_Type? encryption,
     $core.String? stream,
     TimedVersion? version,
+    $core.Iterable<AudioTrackFeature>? audioFeatures,
   }) {
     final $result = create();
     if (sid != null) {
@@ -1110,6 +1135,9 @@ class TrackInfo extends $pb.GeneratedMessage {
     if (version != null) {
       $result.version = version;
     }
+    if (audioFeatures != null) {
+      $result.audioFeatures.addAll(audioFeatures);
+    }
     return $result;
   }
   TrackInfo._() : super();
@@ -1156,6 +1184,11 @@ class TrackInfo extends $pb.GeneratedMessage {
     ..aOS(17, _omitFieldNames ? '' : 'stream')
     ..aOM<TimedVersion>(18, _omitFieldNames ? '' : 'version',
         subBuilder: TimedVersion.create)
+    ..pc<AudioTrackFeature>(
+        19, _omitFieldNames ? '' : 'audioFeatures', $pb.PbFieldType.KE,
+        valueOf: AudioTrackFeature.valueOf,
+        enumValues: AudioTrackFeature.values,
+        defaultEnumValue: AudioTrackFeature.TF_STEREO)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -1386,6 +1419,9 @@ class TrackInfo extends $pb.GeneratedMessage {
   void clearVersion() => clearField(18);
   @$pb.TagNumber(18)
   TimedVersion ensureVersion() => $_ensure(17);
+
+  @$pb.TagNumber(19)
+  $core.List<AudioTrackFeature> get audioFeatures => $_getList(18);
 }
 
 /// provide information about available spatial layers
@@ -1521,7 +1557,7 @@ class VideoLayer extends $pb.GeneratedMessage {
   void clearSsrc() => clearField(5);
 }
 
-enum DataPacket_Value { user, speaker, sipDtmf, notSet }
+enum DataPacket_Value { user, speaker, sipDtmf, transcription, notSet }
 
 /// new DataPacket API
 class DataPacket extends $pb.GeneratedMessage {
@@ -1532,6 +1568,7 @@ class DataPacket extends $pb.GeneratedMessage {
     $core.String? participantIdentity,
     $core.Iterable<$core.String>? destinationIdentities,
     SipDTMF? sipDtmf,
+    Transcription? transcription,
   }) {
     final $result = create();
     if (kind != null) {
@@ -1554,6 +1591,9 @@ class DataPacket extends $pb.GeneratedMessage {
     if (sipDtmf != null) {
       $result.sipDtmf = sipDtmf;
     }
+    if (transcription != null) {
+      $result.transcription = transcription;
+    }
     return $result;
   }
   DataPacket._() : super();
@@ -1568,13 +1608,14 @@ class DataPacket extends $pb.GeneratedMessage {
     2: DataPacket_Value.user,
     3: DataPacket_Value.speaker,
     6: DataPacket_Value.sipDtmf,
+    7: DataPacket_Value.transcription,
     0: DataPacket_Value.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'DataPacket',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'livekit'),
       createEmptyInstance: create)
-    ..oo(0, [2, 3, 6])
+    ..oo(0, [2, 3, 6, 7])
     ..e<DataPacket_Kind>(1, _omitFieldNames ? '' : 'kind', $pb.PbFieldType.OE,
         defaultOrMaker: DataPacket_Kind.RELIABLE,
         valueOf: DataPacket_Kind.valueOf,
@@ -1587,6 +1628,8 @@ class DataPacket extends $pb.GeneratedMessage {
     ..pPS(5, _omitFieldNames ? '' : 'destinationIdentities')
     ..aOM<SipDTMF>(6, _omitFieldNames ? '' : 'sipDtmf',
         subBuilder: SipDTMF.create)
+    ..aOM<Transcription>(7, _omitFieldNames ? '' : 'transcription',
+        subBuilder: Transcription.create)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -1692,6 +1735,20 @@ class DataPacket extends $pb.GeneratedMessage {
   void clearSipDtmf() => clearField(6);
   @$pb.TagNumber(6)
   SipDTMF ensureSipDtmf() => $_ensure(5);
+
+  @$pb.TagNumber(7)
+  Transcription get transcription => $_getN(6);
+  @$pb.TagNumber(7)
+  set transcription(Transcription v) {
+    setField(7, v);
+  }
+
+  @$pb.TagNumber(7)
+  $core.bool hasTranscription() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearTranscription() => clearField(7);
+  @$pb.TagNumber(7)
+  Transcription ensureTranscription() => $_ensure(6);
 }
 
 class ActiveSpeakerUpdate extends $pb.GeneratedMessage {
@@ -1854,6 +1911,9 @@ class UserPacket extends $pb.GeneratedMessage {
     $core.String? participantIdentity,
     @$core.Deprecated('This field is deprecated.')
     $core.Iterable<$core.String>? destinationIdentities,
+    $core.String? id,
+    $fixnum.Int64? startTime,
+    $fixnum.Int64? endTime,
   }) {
     final $result = create();
     if (participantSid != null) {
@@ -1878,6 +1938,15 @@ class UserPacket extends $pb.GeneratedMessage {
       // ignore: deprecated_member_use_from_same_package
       $result.destinationIdentities.addAll(destinationIdentities);
     }
+    if (id != null) {
+      $result.id = id;
+    }
+    if (startTime != null) {
+      $result.startTime = startTime;
+    }
+    if (endTime != null) {
+      $result.endTime = endTime;
+    }
     return $result;
   }
   UserPacket._() : super();
@@ -1899,6 +1968,13 @@ class UserPacket extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'topic')
     ..aOS(5, _omitFieldNames ? '' : 'participantIdentity')
     ..pPS(6, _omitFieldNames ? '' : 'destinationIdentities')
+    ..aOS(8, _omitFieldNames ? '' : 'id')
+    ..a<$fixnum.Int64>(
+        9, _omitFieldNames ? '' : 'startTime', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(
+        10, _omitFieldNames ? '' : 'endTime', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -1990,6 +2066,44 @@ class UserPacket extends $pb.GeneratedMessage {
   @$core.Deprecated('This field is deprecated.')
   @$pb.TagNumber(6)
   $core.List<$core.String> get destinationIdentities => $_getList(5);
+
+  /// Unique ID to indentify the message
+  @$pb.TagNumber(8)
+  $core.String get id => $_getSZ(6);
+  @$pb.TagNumber(8)
+  set id($core.String v) {
+    $_setString(6, v);
+  }
+
+  @$pb.TagNumber(8)
+  $core.bool hasId() => $_has(6);
+  @$pb.TagNumber(8)
+  void clearId() => clearField(8);
+
+  /// start and end time allow relating the message to specific media time
+  @$pb.TagNumber(9)
+  $fixnum.Int64 get startTime => $_getI64(7);
+  @$pb.TagNumber(9)
+  set startTime($fixnum.Int64 v) {
+    $_setInt64(7, v);
+  }
+
+  @$pb.TagNumber(9)
+  $core.bool hasStartTime() => $_has(7);
+  @$pb.TagNumber(9)
+  void clearStartTime() => clearField(9);
+
+  @$pb.TagNumber(10)
+  $fixnum.Int64 get endTime => $_getI64(8);
+  @$pb.TagNumber(10)
+  set endTime($fixnum.Int64 v) {
+    $_setInt64(8, v);
+  }
+
+  @$pb.TagNumber(10)
+  $core.bool hasEndTime() => $_has(8);
+  @$pb.TagNumber(10)
+  void clearEndTime() => clearField(10);
 }
 
 class SipDTMF extends $pb.GeneratedMessage {
@@ -2066,6 +2180,245 @@ class SipDTMF extends $pb.GeneratedMessage {
   $core.bool hasDigit() => $_has(1);
   @$pb.TagNumber(4)
   void clearDigit() => clearField(4);
+}
+
+class Transcription extends $pb.GeneratedMessage {
+  factory Transcription({
+    $core.String? transcribedParticipantIdentity,
+    $core.String? trackId,
+    $core.Iterable<TranscriptionSegment>? segments,
+  }) {
+    final $result = create();
+    if (transcribedParticipantIdentity != null) {
+      $result.transcribedParticipantIdentity = transcribedParticipantIdentity;
+    }
+    if (trackId != null) {
+      $result.trackId = trackId;
+    }
+    if (segments != null) {
+      $result.segments.addAll(segments);
+    }
+    return $result;
+  }
+  Transcription._() : super();
+  factory Transcription.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory Transcription.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Transcription',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'livekit'),
+      createEmptyInstance: create)
+    ..aOS(2, _omitFieldNames ? '' : 'transcribedParticipantIdentity')
+    ..aOS(3, _omitFieldNames ? '' : 'trackId')
+    ..pc<TranscriptionSegment>(
+        4, _omitFieldNames ? '' : 'segments', $pb.PbFieldType.PM,
+        subBuilder: TranscriptionSegment.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  Transcription clone() => Transcription()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  Transcription copyWith(void Function(Transcription) updates) =>
+      super.copyWith((message) => updates(message as Transcription))
+          as Transcription;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static Transcription create() => Transcription._();
+  Transcription createEmptyInstance() => create();
+  static $pb.PbList<Transcription> createRepeated() =>
+      $pb.PbList<Transcription>();
+  @$core.pragma('dart2js:noInline')
+  static Transcription getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Transcription>(create);
+  static Transcription? _defaultInstance;
+
+  /// Participant that got its speech transcribed
+  @$pb.TagNumber(2)
+  $core.String get transcribedParticipantIdentity => $_getSZ(0);
+  @$pb.TagNumber(2)
+  set transcribedParticipantIdentity($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasTranscribedParticipantIdentity() => $_has(0);
+  @$pb.TagNumber(2)
+  void clearTranscribedParticipantIdentity() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get trackId => $_getSZ(1);
+  @$pb.TagNumber(3)
+  set trackId($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasTrackId() => $_has(1);
+  @$pb.TagNumber(3)
+  void clearTrackId() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.List<TranscriptionSegment> get segments => $_getList(2);
+}
+
+class TranscriptionSegment extends $pb.GeneratedMessage {
+  factory TranscriptionSegment({
+    $core.String? id,
+    $core.String? text,
+    $fixnum.Int64? startTime,
+    $fixnum.Int64? endTime,
+    $core.bool? final_5,
+    $core.String? language,
+  }) {
+    final $result = create();
+    if (id != null) {
+      $result.id = id;
+    }
+    if (text != null) {
+      $result.text = text;
+    }
+    if (startTime != null) {
+      $result.startTime = startTime;
+    }
+    if (endTime != null) {
+      $result.endTime = endTime;
+    }
+    if (final_5 != null) {
+      $result.final_5 = final_5;
+    }
+    if (language != null) {
+      $result.language = language;
+    }
+    return $result;
+  }
+  TranscriptionSegment._() : super();
+  factory TranscriptionSegment.fromBuffer($core.List<$core.int> i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(i, r);
+  factory TranscriptionSegment.fromJson($core.String i,
+          [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'TranscriptionSegment',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'livekit'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'text')
+    ..a<$fixnum.Int64>(
+        3, _omitFieldNames ? '' : 'startTime', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..a<$fixnum.Int64>(4, _omitFieldNames ? '' : 'endTime', $pb.PbFieldType.OU6,
+        defaultOrMaker: $fixnum.Int64.ZERO)
+    ..aOB(5, _omitFieldNames ? '' : 'final')
+    ..aOS(6, _omitFieldNames ? '' : 'language')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+      'Will be removed in next major version')
+  TranscriptionSegment clone() =>
+      TranscriptionSegment()..mergeFromMessage(this);
+  @$core.Deprecated('Using this can add significant overhead to your binary. '
+      'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+      'Will be removed in next major version')
+  TranscriptionSegment copyWith(void Function(TranscriptionSegment) updates) =>
+      super.copyWith((message) => updates(message as TranscriptionSegment))
+          as TranscriptionSegment;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static TranscriptionSegment create() => TranscriptionSegment._();
+  TranscriptionSegment createEmptyInstance() => create();
+  static $pb.PbList<TranscriptionSegment> createRepeated() =>
+      $pb.PbList<TranscriptionSegment>();
+  @$core.pragma('dart2js:noInline')
+  static TranscriptionSegment getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<TranscriptionSegment>(create);
+  static TranscriptionSegment? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String v) {
+    $_setString(0, v);
+  }
+
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get text => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set text($core.String v) {
+    $_setString(1, v);
+  }
+
+  @$pb.TagNumber(2)
+  $core.bool hasText() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearText() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get startTime => $_getI64(2);
+  @$pb.TagNumber(3)
+  set startTime($fixnum.Int64 v) {
+    $_setInt64(2, v);
+  }
+
+  @$pb.TagNumber(3)
+  $core.bool hasStartTime() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStartTime() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get endTime => $_getI64(3);
+  @$pb.TagNumber(4)
+  set endTime($fixnum.Int64 v) {
+    $_setInt64(3, v);
+  }
+
+  @$pb.TagNumber(4)
+  $core.bool hasEndTime() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearEndTime() => clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get final_5 => $_getBF(4);
+  @$pb.TagNumber(5)
+  set final_5($core.bool v) {
+    $_setBool(4, v);
+  }
+
+  @$pb.TagNumber(5)
+  $core.bool hasFinal_5() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearFinal_5() => clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get language => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set language($core.String v) {
+    $_setString(5, v);
+  }
+
+  @$pb.TagNumber(6)
+  $core.bool hasLanguage() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearLanguage() => clearField(6);
 }
 
 class ParticipantTracks extends $pb.GeneratedMessage {
@@ -2147,6 +2500,7 @@ class ServerInfo extends $pb.GeneratedMessage {
     $core.String? region,
     $core.String? nodeId,
     $core.String? debugInfo,
+    $core.int? agentProtocol,
   }) {
     final $result = create();
     if (edition != null) {
@@ -2166,6 +2520,9 @@ class ServerInfo extends $pb.GeneratedMessage {
     }
     if (debugInfo != null) {
       $result.debugInfo = debugInfo;
+    }
+    if (agentProtocol != null) {
+      $result.agentProtocol = agentProtocol;
     }
     return $result;
   }
@@ -2191,6 +2548,8 @@ class ServerInfo extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'region')
     ..aOS(5, _omitFieldNames ? '' : 'nodeId')
     ..aOS(6, _omitFieldNames ? '' : 'debugInfo')
+    ..a<$core.int>(
+        7, _omitFieldNames ? '' : 'agentProtocol', $pb.PbFieldType.O3)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('Using this can add significant overhead to your binary. '
@@ -2286,6 +2645,18 @@ class ServerInfo extends $pb.GeneratedMessage {
   $core.bool hasDebugInfo() => $_has(5);
   @$pb.TagNumber(6)
   void clearDebugInfo() => clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.int get agentProtocol => $_getIZ(6);
+  @$pb.TagNumber(7)
+  set agentProtocol($core.int v) {
+    $_setSignedInt32(6, v);
+  }
+
+  @$pb.TagNumber(7)
+  $core.bool hasAgentProtocol() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearAgentProtocol() => clearField(7);
 }
 
 /// details about the client

@@ -81,7 +81,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
     final trackInfo = await room.engine.addTrack(
       cid: track.getCid(),
       name: publishOptions.name ?? AudioPublishOptions.defaultMicrophoneName,
-      stream: publishOptions.stream,
+      stream: buildStreamId(publishOptions, track.source),
       kind: track.kind.toPBType(),
       source: track.source.toPBType(),
       dtx: publishOptions.dtx,
@@ -179,8 +179,8 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
     // use constraints passed to getUserMedia by default
     VideoDimensions dimensions = track.currentOptions.params.dimensions;
 
-    if (kIsWeb) {
-      // getSettings() is only implemented for Web
+    if (kIsWeb || lkPlatformIsMobile()) {
+      // getSettings() is only implemented for Web & Mobile
       try {
         // try to use getSettings for more accurate resolution
         final settings = track.mediaStreamTrack.getSettings();
@@ -236,7 +236,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
           (track.source == TrackSource.screenShareVideo
               ? VideoPublishOptions.defaultScreenShareName
               : VideoPublishOptions.defaultCameraName),
-      stream: publishOptions.stream,
+      stream: buildStreamId(publishOptions, track.source),
       kind: track.kind.toPBType(),
       source: track.source.toPBType(),
       dimensions: dimensions,
@@ -297,13 +297,13 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
       track.codec = publishOptions.videoCodec;
     }
 
-    // prefer to maintainResolution for screen share
-    if (track.source == TrackSource.screenShareVideo) {
-      var sender = track.transceiver!.sender;
-      var parameters = sender.parameters;
-      parameters.degradationPreference =
-          rtc.RTCDegradationPreference.MAINTAIN_RESOLUTION;
-      await sender.setParameters(parameters);
+    if ([TrackSource.camera, TrackSource.screenShareVideo]
+        .contains(track.source)) {
+      var degradationPreference = publishOptions.degradationPreference ??
+          getDefaultDegradationPreference(
+            track,
+          );
+      track.setDegradationPreference(degradationPreference);
     }
 
     if (kIsWeb &&
@@ -398,6 +398,18 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
     await pub.dispose();
   }
 
+  DegradationPreference getDefaultDegradationPreference(LocalVideoTrack track) {
+    // a few of reasons we have different default paths:
+    // 1. without this, Chrome seems to aggressively resize the SVC video stating `quality-limitation: bandwidth` even when BW isn't an issue
+    // 2. since we are overriding contentHint to motion (to workaround L1T3 publishing), it overrides the default degradationPreference to `balanced`
+    VideoDimensions dimensions = track.currentOptions.params.dimensions;
+    if (track.source == TrackSource.screenShareVideo ||
+        dimensions.height >= 1080) {
+      return DegradationPreference.maintainResolution;
+    }
+    return DegradationPreference.balanced;
+  }
+
   /// Convenience method to unpublish all tracks.
   Future<void> unpublishAllTracks(
       {bool notify = true, bool? stopOnUnpublish}) async {
@@ -452,6 +464,15 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
         .sendUpdateLocalMetadata(lk_rtc.UpdateParticipantMetadata(
       name: name,
       metadata: metadata,
+    ));
+  }
+
+  /// Sets and updates the attributes of the local participant.
+  /// @attributes key-value pairs to set
+  void setAttributes(Map<String, String> attributes) {
+    room.engine.signalClient
+        .sendUpdateLocalMetadata(lk_rtc.UpdateParticipantMetadata(
+      attributes: attributes,
     ));
   }
 
@@ -511,6 +532,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
   /// Shortcut for publishing a [TrackSource.camera]
   Future<LocalTrackPublication?> setCameraEnabled(bool enabled,
       {CameraCaptureOptions? cameraCaptureOptions}) async {
+    cameraCaptureOptions ??= room.roomOptions.defaultCameraCaptureOptions;
     return setSourceEnabled(TrackSource.camera, enabled,
         cameraCaptureOptions: cameraCaptureOptions);
   }
@@ -518,6 +540,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
   /// Shortcut for publishing a [TrackSource.microphone]
   Future<LocalTrackPublication?> setMicrophoneEnabled(bool enabled,
       {AudioCaptureOptions? audioCaptureOptions}) async {
+    audioCaptureOptions ??= room.roomOptions.defaultAudioCaptureOptions;
     return setSourceEnabled(TrackSource.microphone, enabled,
         audioCaptureOptions: audioCaptureOptions);
   }
@@ -526,6 +549,8 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
   Future<LocalTrackPublication?> setScreenShareEnabled(bool enabled,
       {bool? captureScreenAudio,
       ScreenShareCaptureOptions? screenShareCaptureOptions}) async {
+    screenShareCaptureOptions ??=
+        room.roomOptions.defaultScreenShareCaptureOptions;
     return setSourceEnabled(TrackSource.screenShareVideo, enabled,
         captureScreenAudio: captureScreenAudio,
         screenShareCaptureOptions: screenShareCaptureOptions);
@@ -548,8 +573,15 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
 
     final publication = getTrackPublicationBySource(source);
     if (publication != null) {
+      final stopOnMute = switch (publication.source) {
+        TrackSource.camera =>
+          cameraCaptureOptions?.stopCameraCaptureOnMute ?? true,
+        TrackSource.microphone =>
+          audioCaptureOptions?.stopAudioCaptureOnMute ?? true,
+        _ => true,
+      };
       if (enabled) {
-        await publication.unmute();
+        await publication.unmute(stopOnMute: stopOnMute);
       } else {
         if (source == TrackSource.screenShareVideo) {
           await removePublishedTrack(publication.sid);
@@ -559,7 +591,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
             await removePublishedTrack(screenAudio.sid);
           }
         } else {
-          await publication.mute();
+          await publication.mute(stopOnMute: stopOnMute);
         }
       }
       await room.applyAudioSpeakerSettings();
@@ -714,7 +746,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
       backupCodec,
     );
 
-    var cid = simulcastTrack.sender!.senderId;
+    final cid = simulcastTrack.sender!.senderId;
 
     final trackInfo = await room.engine.addTrack(
         cid: cid,
@@ -722,7 +754,7 @@ class LocalParticipant extends Participant<LocalTrackPublication> {
             (track.source == TrackSource.screenShareVideo
                 ? VideoPublishOptions.defaultScreenShareName
                 : VideoPublishOptions.defaultCameraName),
-        stream: options.stream,
+        stream: buildStreamId(options, track.source),
         kind: track.kind.toPBType(),
         source: track.source.toPBType(),
         dimensions: dimensions,
