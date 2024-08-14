@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ bool lkPlatformIs(PlatformType type) => lkPlatform() == type;
 bool lkPlatformIsMobile() =>
     [PlatformType.iOS, PlatformType.android].contains(lkPlatform());
 
+bool lkPlatformIsWebMobile() => lkPlatformIsWebMobileImplementation();
+
 bool lkPlatformIsDesktop() => [
       PlatformType.macOS,
       PlatformType.windows,
@@ -35,6 +37,15 @@ bool lkPlatformSupportsE2EE() => lkE2EESupportedImplementation();
 bool lkPlatformIsTest() => Platform.environment.containsKey('FLUTTER_TEST');
 
 BrowserType lkBrowser() => lkBrowserImplementation();
+
+BrowserVersion lkBrowserVersion() => lkBrowserVersionImplementation();
+
+/// skips stop/replaceTrack for the following platforms and only toggles
+/// track.enabled.
+bool skipStopForTrackMute() =>
+    {PlatformType.windows}.contains(lkPlatform()) ||
+    (lkPlatformIs(PlatformType.web) &&
+        [BrowserType.firefox].contains(lkBrowser()));
 
 enum PlatformType {
   web,
@@ -53,4 +64,17 @@ enum BrowserType {
   internetExplorer,
   wkWebView,
   unknown,
+}
+
+class BrowserVersion {
+  const BrowserVersion(this.major, this.minor, this.patch);
+
+  /// The major version number: "1" in "1.2.3".
+  final int major;
+
+  /// The minor version number: "2" in "1.2.3".
+  final int minor;
+
+  /// The patch version number: "3" in "1.2.3".
+  final int patch;
 }

@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 // package as the core of your plugin.
 
 // ignore: unused_import
-import 'dart:html' as html show document, ScriptElement; // import_sorter: keep
+import 'package:web/web.dart' as web
+    show document, HTMLScriptElement; // import_sorter: keep
 
 /// A web implementation of the Livekit plugin.
 class LiveKitWebPlugin {

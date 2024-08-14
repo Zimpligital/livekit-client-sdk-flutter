@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -123,7 +123,12 @@ class Transport extends Disposable {
       return;
     }
 
-    await pc.setRemoteDescription(sd);
+    try {
+      await pc.setRemoteDescription(sd);
+    } catch (e) {
+      logger
+          .warning('[$objectId] setRemoteDescription() failed with error: $e');
+    }
 
     for (final candidate in _pendingCandidates) {
       await pc.addCandidate(candidate);
@@ -204,7 +209,6 @@ class Transport extends Disposable {
             continue;
           }
 
-          var fmtpFound = false;
           for (var fmtp in media['fmtp']) {
             if (fmtp['payload'] == codecPayload) {
               if (!(fmtp['config'] as String)
@@ -212,23 +216,9 @@ class Transport extends Disposable {
                 fmtp['config'] +=
                     ';x-google-start-bitrate=${(trackbr.maxbr * startBitrateForSVC).toInt()}';
               }
-              if (!(fmtp['config'] as String)
-                  .contains('x-google-max-bitrate')) {
-                fmtp['config'] += ';x-google-max-bitrate=${trackbr.maxbr}';
-              }
-              fmtpFound = true;
               break;
             }
           }
-
-          if (!fmtpFound) {
-            media['fmtp']?.add({
-              'payload': codecPayload,
-              'config':
-                  'x-google-start-bitrate=${(trackbr.maxbr * startBitrateForSVC).toInt()};x-google-max-bitrate=${trackbr.maxbr}',
-            });
-          }
-
           continue;
         }
       }
@@ -270,7 +260,6 @@ class Transport extends Disposable {
 
     try {
       final result = await pc.getRemoteDescription();
-      logger.fine('pc.getRemoteDescription $result');
       return result;
     } catch (_) {
       logger.warning('pc.getRemoteDescription failed with error: $_');
@@ -327,8 +316,8 @@ class Transport extends Disposable {
       final originalSdp = sd.sdp;
       sd.sdp = munged;
       try {
-        logger.fine(
-            'setting munged ${remote == true ? 'remote' : 'local'} description munged: $munged ');
+        logger.fine('setting munged ${remote == true ? 'remote' : 'local'}');
+        logger.finer('description munged: $munged ');
         if (remote == true) {
           await pc.setRemoteDescription(sd);
         } else {

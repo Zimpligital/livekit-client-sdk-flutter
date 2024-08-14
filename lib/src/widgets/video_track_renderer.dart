@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
@@ -19,11 +20,13 @@ import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
 import '../events.dart';
 import '../extensions.dart';
 import '../internal/events.dart';
+import '../logger.dart';
 import '../managers/event.dart';
 import '../support/platform.dart';
 import '../track/local/local.dart';
 import '../track/local/video.dart';
 import '../track/options.dart';
+import '../types/other.dart';
 
 enum VideoViewMirrorMode {
   auto,
@@ -31,16 +34,24 @@ enum VideoViewMirrorMode {
   mirror,
 }
 
+enum VideoRenderMode {
+  auto,
+  texture,
+  platformView,
+}
+
 /// Widget that renders a [VideoTrack].
 class VideoTrackRenderer extends StatefulWidget {
   final VideoTrack track;
   final rtc.RTCVideoViewObjectFit fit;
   final VideoViewMirrorMode mirrorMode;
+  final VideoRenderMode renderMode;
 
   const VideoTrackRenderer(
     this.track, {
     this.fit = rtc.RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
     this.mirrorMode = VideoViewMirrorMode.auto,
+    this.renderMode = VideoRenderMode.auto,
     Key? key,
   }) : super(key: key);
 
@@ -49,40 +60,60 @@ class VideoTrackRenderer extends StatefulWidget {
 }
 
 class _VideoTrackRendererState extends State<VideoTrackRenderer> {
-  final _renderer = rtc.RTCVideoRenderer();
-  bool _rendererReady = false;
+  rtc.VideoRenderer? _renderer;
+  // for flutter web only.
+  bool _rendererReadyForWeb = false;
   EventsListener<TrackEvent>? _listener;
   // Used to compute visibility information
   late GlobalKey _internalKey;
+
+  Future<rtc.VideoRenderer> _initializeRenderer() async {
+    if (widget.renderMode == VideoRenderMode.platformView) {
+      return Null as Future<rtc.VideoRenderer>;
+    }
+    _renderer ??= rtc.RTCVideoRenderer();
+    await _renderer!.initialize();
+    await _attach();
+    return _renderer!;
+  }
+
+  void disposeRenderer() {
+    try {
+      _renderer?.srcObject = null;
+      _renderer?.dispose();
+      _renderer = null;
+    } catch (e) {
+      logger.warning('Got error disposing renderer: $e');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _internalKey = widget.track.addViewKey();
-
-    (() async {
-      await _renderer.initialize();
-      await _attach();
-      setState(() => _rendererReady = true);
-    })();
+    if (kIsWeb) {
+      () async {
+        await _initializeRenderer();
+        setState(() => _rendererReadyForWeb = true);
+      }();
+    }
   }
 
   @override
   void dispose() {
     widget.track.removeViewKey(_internalKey);
     _listener?.dispose();
-    _renderer.srcObject = null;
-    _renderer.dispose();
+    disposeRenderer();
     super.dispose();
   }
 
   Future<void> _attach() async {
-    _renderer.srcObject = widget.track.mediaStream;
+    _renderer?.srcObject = widget.track.mediaStream;
     await _listener?.dispose();
     _listener = widget.track.createListener()
       ..on<TrackStreamUpdatedEvent>((event) {
         if (!mounted) return;
-        _renderer.srcObject = event.stream;
+        _renderer?.srcObject = event.stream;
       })
       ..on<LocalTrackOptionsUpdatedEvent>((event) {
         if (!mounted) return;
@@ -104,12 +135,11 @@ class _VideoTrackRendererState extends State<VideoTrackRenderer> {
 
     if ([BrowserType.safari, BrowserType.firefox].contains(lkBrowser()) &&
         oldWidget.key != widget.key) {
-      _renderer.srcObject = widget.track.mediaStream;
+      _renderer?.srcObject = widget.track.mediaStream;
     }
   }
 
-  @override
-  Widget build(BuildContext context) => !_rendererReady
+  Widget _videoViewForWeb() => !_rendererReadyForWeb
       ? Container()
       : Builder(
           key: _internalKey,
@@ -120,7 +150,7 @@ class _VideoTrackRendererState extends State<VideoTrackRenderer> {
               widget.track.onVideoViewBuild?.call(_internalKey);
             });
             return rtc.RTCVideoView(
-              _renderer,
+              _renderer! as rtc.RTCVideoRenderer,
               mirror: _shouldMirror(),
               filterQuality: FilterQuality.medium,
               objectFit: widget.fit,
@@ -128,7 +158,54 @@ class _VideoTrackRendererState extends State<VideoTrackRenderer> {
           },
         );
 
+  Widget _videoViewForNative() => FutureBuilder(
+      future: _initializeRenderer(),
+      builder: (context, snapshot) {
+        if ((snapshot.hasData && _renderer != null) ||
+            [VideoRenderMode.auto, VideoRenderMode.platformView]
+                .contains(widget.renderMode)) {
+          return Builder(
+            key: _internalKey,
+            builder: (ctx) {
+              // let it render before notifying build
+              WidgetsBindingCompatible.instance
+                  ?.addPostFrameCallback((timeStamp) {
+                widget.track.onVideoViewBuild?.call(_internalKey);
+              });
+              if (lkPlatformIs(PlatformType.iOS) &&
+                  [VideoRenderMode.auto, VideoRenderMode.platformView]
+                      .contains(widget.renderMode)) {
+                return rtc.RTCVideoPlatFormView(
+                  mirror: _shouldMirror(),
+                  objectFit: widget.fit,
+                  onViewReady: (controller) {
+                    _renderer = controller;
+                    _renderer?.srcObject = widget.track.mediaStream;
+                    _attach();
+                  },
+                );
+              }
+              return rtc.RTCVideoView(
+                _renderer! as rtc.RTCVideoRenderer,
+                mirror: _shouldMirror(),
+                filterQuality: FilterQuality.medium,
+                objectFit: widget.fit,
+              );
+            },
+          );
+        }
+        return Container();
+      });
+
+  // FutureBuilder will cause flickering for flutter web. so using
+  // different rendering methods for web and native.
+  @override
+  Widget build(BuildContext context) =>
+      kIsWeb ? _videoViewForWeb() : _videoViewForNative();
+
   bool _shouldMirror() {
+    // off for screen share
+    if (widget.track.source == TrackSource.screenShareVideo) return false;
     // on
     if (widget.mirrorMode == VideoViewMirrorMode.mirror) return true;
     // auto

@@ -1,16 +1,20 @@
 <!--BEGIN_BANNER_IMAGE-->
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="/.github/banner_dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="/.github/banner_light.png">
-    <img style="width:100%;" alt="The LiveKit icon, the name of the repository and some sample code in the background." src="/.github/banner_light.png">
-  </picture>
-  <!--END_BANNER_IMAGE-->
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="/.github/banner_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="/.github/banner_light.png">
+  <img style="width:100%;" alt="The LiveKit icon, the name of the repository and some sample code in the background." src="https://raw.githubusercontent.com/livekit/client-sdk-flutter/main/.github/banner_light.png">
+</picture>
+
+<!--END_BANNER_IMAGE-->
 
 [![pub package](https://img.shields.io/pub/v/livekit_client?label=livekit_client&color=blue)](https://pub.dev/packages/livekit_client)
 
 # LiveKit Flutter SDK
 
-<!--BEGIN_DESCRIPTION-->Use this SDK to add real-time video, audio and data features to your Flutter app. By connecting to a self- or cloud-hosted <a href="https://livekit.io/">LiveKit</a> server, you can quickly build applications like interactive live streaming or video calls with just a few lines of code.<!--END_DESCRIPTION-->
+<!--BEGIN_DESCRIPTION-->
+Use this SDK to add realtime video, audio and data features to your Flutter app. By connecting to <a href="https://livekit.io/">LiveKit</a> Cloud or a self-hosted server, you can quickly build applications such as multi-modal AI, live streaming, or video calls with just a few lines of code.
+<!--END_DESCRIPTION-->
 
 This package is published to pub.dev as [livekit_client](https://pub.dev/packages/livekit_client).
 
@@ -18,25 +22,22 @@ This package is published to pub.dev as [livekit_client](https://pub.dev/package
 
 More Docs and guides are available at [https://docs.livekit.io](https://docs.livekit.io)
 
-## Current supported features
+## Supported platforms
 
-| Feature | Subscribe/Publish | Simulcast | Background audio | Screen sharing | End to End Encryption | Multi Codec Simulcast |
-| :-----: | :---------------: | :-------: | :--------------: | :------------: | :-------------------: | :-------------------: |
-|   iOS   |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
-| Android |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
-|   Mac   |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
-| Windows |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
-| Linux   |        🟢         |    🟢     |        🟢        |       🟢       |       🟢               |          🟢          |
+LiveKit client SDK for Flutter is designed to work across all platforms supported by Flutter:
 
-🟢 = Available
-
-🟡 = Coming soon (Work in progress)
-
-🔴 = Not currently available (Possibly in the future)
+- Android
+- iOS
+- Web
+- macOS
+- Windows
+- Linux
 
 ## Example app
 
-We built a multi-user conferencing app as an example in the [example/](example/) folder. You can join the same room from any supported LiveKit clients.
+We built a multi-user conferencing app as an example in the [example/](example/) folder. LiveKit is compatible cross-platform: you could join the same room using any of our supported realtime SDKs.
+
+Online demo: https://livekit.github.io/client-sdk-flutter/
 
 ## Installation
 
@@ -149,7 +150,7 @@ void main() async {
 
 #### Audio Modes
 
-By default, we use the `communication` audio mode on Android which works best for two-way voice communication. 
+By default, we use the `communication` audio mode on Android which works best for two-way voice communication.
 
 If your app is media playback oriented and does not need the use of the device's microphone, you can use the `media`
 audio mode which will provide better audio quality.
@@ -178,12 +179,6 @@ Note: the audio routing will become controlled by the system and cannot be manua
 
 In order to enable Flutter desktop development, please follow [instructions here](https://docs.flutter.dev/desktop#set-up).
 
-On M1 Macs, you will also need to install x86_64 version of FFI:
-
-```
-sudo arch -x86_64 gem install ffi
-```
-
 On Windows [VS 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=community&rel=16) is needed (link in flutter docs will download VS 2022).
 
 ## Usage
@@ -197,7 +192,10 @@ final roomOptions = RoomOptions(
   // ... your room options
 )
 
-final room = await LiveKitClient.connect(url, token, roomOptions: roomOptions);
+final room = Room();
+
+await room.connect(url, token, roomOptions: roomOptions);
+
 try {
   // video will fail when running in ios simulator
   await room.localParticipant.setCameraEnabled(true);
@@ -218,10 +216,15 @@ room.localParticipant.setScreenShareEnabled(true);
 
 #### Android
 
-On Android, you would have to define a foreground service in your AndroidManifest.xml.
+On Android, you will have to use a [media projection foreground service](https://developer.android.com/develop/background-work/services/fg-service-types#media-projection).
+
+In our example, we use the `flutter_background` package to handle this. In the app's AndroidManifest.xml file, declare the service with the appropriate types and permissions as following:
 
 ```xml title="AndroidManifest.xml"
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Required permissions for screen share -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
   <application>
     ...
     <service
@@ -232,6 +235,8 @@ On Android, you would have to define a foreground service in your AndroidManifes
   </application>
 </manifest>
 ```
+
+Before starting the background service and enabling screen share, you **must** call `Helper.requestCapturePermission()` from `flutter_webrtc`, and only proceed if it returns true.
 
 #### iOS
 
@@ -272,12 +277,12 @@ By default, the native platform can support E2EE without any settings, but for f
 
 ```bash
 # for example app
-dart compile js .\web\e2ee.worker.dart -o .\example\web\e2ee.worker.dart.js
+dart compile js web/e2ee.worker.dart -o example/web/e2ee.worker.dart.js -m
 # for your project
 export YOU_PROJECT_DIR=your_project_dir
 git clone https://github.com/livekit/client-sdk-flutter.git
 cd client-sdk-flutter && flutter pub get
-dart compile js .\web\e2ee.worker.dart -o ${YOU_PROJECT_DIR}\web\e2ee.worker.dart.js
+dart compile js web/e2ee.worker.dart -o ${YOU_PROJECT_DIR}/web/e2ee.worker.dart.js -m
 ```
 
 ### Advanced track manipulation
@@ -483,15 +488,14 @@ Apache License 2.0
 A huge thank you to [flutter-webrtc](https://github.com/flutter-webrtc/flutter-webrtc) for making it possible to use WebRTC in Flutter.
 
 <!--BEGIN_REPO_NAV-->
-
 <br/><table>
-
 <thead><tr><th colspan="2">LiveKit Ecosystem</th></tr></thead>
 <tbody>
-<tr><td>Client SDKs</td><td><a href="https://github.com/livekit/components-js">Components</a> · <a href="https://github.com/livekit/client-sdk-js">JavaScript</a> · <a href="https://github.com/livekit/client-sdk-swift">iOS/macOS</a> · <a href="https://github.com/livekit/client-sdk-android">Android</a> · <b>Flutter</b> · <a href="https://github.com/livekit/client-sdk-react-native">React Native</a> · <a href="https://github.com/livekit/client-sdk-rust">Rust</a> · <a href="https://github.com/livekit/client-sdk-python">Python</a> · <a href="https://github.com/livekit/client-sdk-unity-web">Unity (web)</a> · <a href="https://github.com/livekit/client-sdk-unity">Unity (beta)</a></td></tr><tr></tr>
-<tr><td>Server SDKs</td><td><a href="https://github.com/livekit/server-sdk-js">Node.js</a> · <a href="https://github.com/livekit/server-sdk-go">Golang</a> · <a href="https://github.com/livekit/server-sdk-ruby">Ruby</a> · <a href="https://github.com/livekit/server-sdk-kotlin">Java/Kotlin</a> · <a href="https://github.com/agence104/livekit-server-sdk-php">PHP (community)</a> · <a href="https://github.com/tradablebits/livekit-server-sdk-python">Python (community)</a></td></tr><tr></tr>
-<tr><td>Services</td><td><a href="https://github.com/livekit/livekit">Livekit server</a> · <a href="https://github.com/livekit/egress">Egress</a> · <a href="https://github.com/livekit/ingress">Ingress</a></td></tr><tr></tr>
-<tr><td>Resources</td><td><a href="https://docs.livekit.io">Docs</a> · <a href="https://github.com/livekit-examples">Example apps</a> · <a href="https://livekit.io/cloud">Cloud</a> · <a href="https://docs.livekit.io/oss/deployment">Self-hosting</a> · <a href="https://github.com/livekit/livekit-cli">CLI</a></td></tr>
+<tr><td>Realtime SDKs</td><td><a href="https://github.com/livekit/components-js">React Components</a> · <a href="https://github.com/livekit/client-sdk-js">Browser</a> · <a href="https://github.com/livekit/components-swift">Swift Components</a> · <a href="https://github.com/livekit/client-sdk-swift">iOS/macOS/visionOS</a> · <a href="https://github.com/livekit/client-sdk-android">Android</a> · <b>Flutter</b> · <a href="https://github.com/livekit/client-sdk-react-native">React Native</a> · <a href="https://github.com/livekit/rust-sdks">Rust</a> · <a href="https://github.com/livekit/node-sdks">Node.js</a> · <a href="https://github.com/livekit/python-sdks">Python</a> · <a href="https://github.com/livekit/client-sdk-unity-web">Unity (web)</a> · <a href="https://github.com/livekit/client-sdk-unity">Unity (beta)</a></td></tr><tr></tr>
+<tr><td>Server APIs</td><td><a href="https://github.com/livekit/node-sdks">Node.js</a> · <a href="https://github.com/livekit/server-sdk-go">Golang</a> · <a href="https://github.com/livekit/server-sdk-ruby">Ruby</a> · <a href="https://github.com/livekit/server-sdk-kotlin">Java/Kotlin</a> · <a href="https://github.com/livekit/python-sdks">Python</a> · <a href="https://github.com/livekit/rust-sdks">Rust</a> · <a href="https://github.com/agence104/livekit-server-sdk-php">PHP (community)</a></td></tr><tr></tr>
+<tr><td>Agents Frameworks</td><td><a href="https://github.com/livekit/agents">Python</a> · <a href="https://github.com/livekit/agent-playground">Playground</a></td></tr><tr></tr>
+<tr><td>Services</td><td><a href="https://github.com/livekit/livekit">LiveKit server</a> · <a href="https://github.com/livekit/egress">Egress</a> · <a href="https://github.com/livekit/ingress">Ingress</a> · <a href="https://github.com/livekit/sip">SIP</a></td></tr><tr></tr>
+<tr><td>Resources</td><td><a href="https://docs.livekit.io">Docs</a> · <a href="https://github.com/livekit-examples">Example apps</a> · <a href="https://livekit.io/cloud">Cloud</a> · <a href="https://docs.livekit.io/home/self-hosting/deployment">Self-hosting</a> · <a href="https://github.com/livekit/livekit-cli">CLI</a></td></tr>
 </tbody>
 </table>
 <!--END_REPO_NAV-->

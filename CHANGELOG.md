@@ -1,5 +1,166 @@
 # CHANGELOG
 
+## 2.2.4
+
+* fix bug for PlatformView on iOS (#570)
+* Deprecated `connectOptions` in `Room` constructor.
+* Deprecated `roomOptions` int `room.connect`.
+* Added `screenShareEncoding` for `VideoPublishOptions`.
+* Change `CameraCaptureOptions.params.encoding` to optional.
+   It is recommended to use `VideoPublishOptions.videoEncoding/screenShareEncoding`
+   to control the video sending bitrate.
+
+## 2.2.3
+
+* add PlatformView for iOS (#509)
+* update lints to 4.0.0. (#563)
+
+## 2.2.2
+
+* feat: expose DegradationPreference for publish options. (#556)
+* fix room.disconnect issue. (#559)
+* fix: use getSettings() to get actual dimensions for mobile (#560)
+* Add support for participant attributes (#558)
+
+## 2.2.1
+
+* fix: fix crash for windows
+* feat: bump version for flutter-webrtc.
+* fix: ratchet on a single frame until ratchetWindowSize (#544)
+* fix: fix mediaStreamTrack.getSettings() on Flutter Web.
+
+## 2.2.0
+
+* feat: add Transcription Event. (#531)
+* feat: Expose Participant.Kind. (#532)
+* fix: ignore unable to parse frames completely (#530)
+
+## 2.1.6
+
+* Framecryptor decrypting fixes (#520)
+* feat: add voiceIsolation support (#523)
+* fix: audio session control for ios.
+
+## 2.1.5
+
+fix: audio devcie ids consistency (#513)
+feat: provide option to skip stop/restartTrack for mute/unmute (#516)
+
+## 2.1.4
+
+* bump version of flutter-webrtc with privacy manifest files
+
+## 2.1.3
+
+* upgrade to connectivity plus 6.x.
+* bump dart_webrtc to 1.4.3.
+
+## 2.1.2
+
+* fix: Expose keyRingSize/discardFrameWhenCryptorNotReady parameters for KeyProvider
+
+## 2.1.1
+
+* update to package:web (#484)
+* feat: add keyRingSize/discardFrameWhenCryptorNotReady to KeyProviderOptions. (#493)
+
+## 2.1.0
+
+* Fix: bug for sync state (#491)
+
+## 2.0.3
+
+* Read capabilities from RtcRTPReceiver instead of from sender. (#488)
+* Update screenshare logic for svc publishing (#487)
+* Prevent screen-sharing on flutter web mobile. (#486)
+* feat: add setKey variant, setRawKey (#482)
+
+## 2.0.2
+
+* Add Android 14 media projection perm to docs (#470)
+* fix package of MainActivity.kt (#472)
+* Fix: Remember last settings for republish all tracks (full-reconnect). (#475)
+* Fix: Add screenshareAudioEnabled method (#473)
+* Fix: use latest key index for new rtp nodes (#476)
+
+## 2.0.1
+
+* bug fix for sync streams.
+
+## 2.0.0
+
+## Breaking Changes
+There are several breaking changes between v1 and v2. Please consult our [migration guide](https://docs.livekit.io/guides/migrate-from-v1/) when upgrading to v2.
+
+* `Room.participants` was renamed to `Room.remoteParticipants`
+* `Room.{audio/video}Tracks` was renamed to `Room.{audio/video}TrackPublications`
+* `LocalParticipant.publishData` now uses participant identity as destinations instead of participant sids.
+* `Room.sid` now changed to `await room.getSid();`.
+* Removed `VideoQuality.OFF` from `VideoQuality` enum.
+
+## Removal of previously deprecated APIs
+
+* `LiveKitClient.connect` - Please use `var room = Room(...)` and `room.connect` instead.
+* `track in TrackMutedEvent/TrackUnmutedEvent` - Use `publication` instead
+* `TrackStreamStateUpdatedEvent.trackPublication` - Use `TrackStreamStateUpdatedEvent.publication` instead
+* `RemotePublication.videoQuality` - Use `RemotePublication.setVideoQuality(quality)` instead
+* `RemotePublication.subscribed` - Use `RemotePublication.subscribe()` or `unsubscribe()` instead
+* `RemotePublication.enabled` - Use `RemotePublication.enable()` or `disable()` instead
+* `Participant.unpublishTrack` - Use `Participant.removePublishedTrack` instead
+* Removed `AudioPublishOptions.stopMicTrackOnMute`
+
+## Other changes
+
+* Do not emit Reconnecting event during connection resume. (#459)
+* Cleanup when remove remote participants. (#460)
+* Support change key index for encryptors. (#457)
+* Bug fixes for e2ee (Web/Firefox). (#453)
+* Add lost quality (Protocol v11). (#443)
+* [E2EE] Add key handler for web worker. (#449)
+* E2EE improvement. (#461)
+
+## 1.5.6
+
+* Set different rendering methods for web and native.
+* Improve reconnection events, add RoomAttemptReconnectEvent.
+* upgrade protocol.
+
+## 1.5.5
+
+* Improve reconnect logic for websocket (#406)
+* Fix: Prevent ReplayKitChannel related code from being executed on non-iOS platforms. (#432)
+
+## 1.5.4
+
+* Add AudioSourceStats.
+* Fix: invalid muted state for local publication.
+* Add MediaConnectException.
+* Fix preview bug for desktop screen share.
+* Fix errors caused by window close handler for web.
+* Add topic for search optimization in pub.dev.
+* Fix safari screen sharing failure.
+* Fix e2ee worker compile for flutter web.
+* Fix video renderer issue.
+* Fix: video renderer dispose issue and correctly handle metadataMuted for TrackPublication.
+* Fix getStats for remote track.
+* Fix set setScreenShareEnabled when detect replaykit state changed.
+* Improve room/participants metadata update.
+* Simplify backupCodec setting.
+
+## 1.5.3
+
+* Handling of incompatible published codecs.
+* Fix/unpublish screen audio track when stop screen share.
+* Upgrade connectivity_plus version.
+* Fix: low-resolution screen sharing for safari 17.
+* Update build.gradle for gradle 8.0.0 namespace.
+* Fix captureScreenAudio conditional.
+* Fix iOSBroadcastExtension always false after copyWith invoked.
+* Fix: VP9 svc screenshare.
+* Fix iOS example compilation after upgrading to XCode 15.
+* Fix: Crop video output size to target settings (iOS/macOS).
+* Fix: Fix bluetooth sco not stopping after room disconnect (Android).
+
 ## 1.5.2
 
 * Non-functional update, forcing the versions in 

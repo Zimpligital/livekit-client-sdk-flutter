@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,14 +17,17 @@ import 'package:flutter/foundation.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as rtc;
 
+import 'package:livekit_client/src/extensions.dart';
 import '../../events.dart';
+import '../../exceptions.dart';
 import '../../logger.dart';
+import '../../options.dart';
 import '../../proto/livekit_models.pb.dart' as lk_models;
 import '../../proto/livekit_rtc.pb.dart' as lk_rtc;
+import '../../stats/stats.dart';
 import '../../support/platform.dart';
 import '../../types/other.dart';
 import '../options.dart';
-import '../stats.dart';
 import 'audio.dart';
 import 'local.dart';
 
@@ -51,6 +54,8 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
   @override
   covariant VideoCaptureOptions currentOptions;
 
+  VideoPublishOptions? lastPublishOptions;
+
   num? _currentBitrate;
   get currentBitrate => _currentBitrate;
   Map<String, VideoSenderStats>? prevStats;
@@ -62,7 +67,7 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
 
   @override
   Future<bool> monitorStats() async {
-    if (sender == null || events.isDisposed) {
+    if (sender == null || events.isDisposed || !isActive) {
       _currentBitrate = 0;
       return false;
     }
@@ -83,9 +88,16 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
       num totalBitrate = 0;
       statsMap.forEach((key, s) {
         final prev = prevStats![key];
-        var bitRateForlayer = computeBitrateForSenderStats(s, prev).toInt();
-        _bitrateFoLayers[key] = bitRateForlayer;
-        totalBitrate += bitRateForlayer;
+        if (prev == null) {
+          return;
+        }
+        try {
+          var bitRateForlayer = computeBitrateForSenderStats(s, prev).toInt();
+          _bitrateFoLayers[key] = bitRateForlayer;
+          totalBitrate += bitRateForlayer;
+        } catch (e) {
+          logger.warning('Failed to compute bitrate for layer: $e');
+        }
       });
       _currentBitrate = totalBitrate;
       events.emit(VideoSenderStatsEvent(
@@ -156,7 +168,7 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
     rtc.MediaStreamTrack track,
     this.currentOptions,
   ) : super(
-          lk_models.TrackType.VIDEO,
+          TrackType.VIDEO,
           source,
           stream,
           track,
@@ -184,6 +196,10 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
   static Future<LocalVideoTrack> createScreenShareTrack([
     ScreenShareCaptureOptions? options,
   ]) async {
+    if (lkPlatformIsWebMobile()) {
+      throw TrackCreateException(
+          'Screen sharing is not supported on mobile devices');
+    }
     options ??= const ScreenShareCaptureOptions();
 
     final stream = await LocalTrack.createStream(options);
@@ -203,6 +219,10 @@ class LocalVideoTrack extends LocalTrack with VideoTrack {
   static Future<List<LocalTrack>> createScreenShareTracksWithAudio([
     ScreenShareCaptureOptions? options,
   ]) async {
+    if (lkPlatformIsWebMobile()) {
+      throw TrackCreateException(
+          'Screen sharing is not supported on mobile devices');
+    }
     if (options == null) {
       options = const ScreenShareCaptureOptions(captureScreenAudio: true);
     } else {
@@ -341,7 +361,7 @@ extension LocalVideoTrackExt on LocalVideoTrack {
     return setPublishingLayersForSender(track!.sender!, encodings, layers);
   }
 
-  lk_models.VideoQuality videoQualityForRid(String rid) {
+  lk_models.VideoQuality _videoQualityForRid(String rid) {
     switch (rid) {
       case 'f':
         return lk_models.VideoQuality.HIGH;
@@ -412,7 +432,7 @@ extension LocalVideoTrackExt on LocalVideoTrack {
         if (rid == '') {
           rid = 'q';
         }
-        var quality = videoQualityForRid(rid);
+        var quality = _videoQualityForRid(rid);
         var subscribedQuality =
             layers.firstWhereOrNull((q) => q.quality == quality);
         if (subscribedQuality == null) {
@@ -446,9 +466,13 @@ extension LocalVideoTrackExt on LocalVideoTrack {
 
     if (hasChanged) {
       params.encodings = encodings;
-      final result = await sender.setParameters(params);
-      if (result == false) {
-        logger.warning('Failed to update sender parameters');
+      try {
+        final result = await sender.setParameters(params);
+        if (result == false) {
+          logger.warning('Failed to update sender parameters');
+        }
+      } catch (e) {
+        logger.warning('Failed to update sender parameters $e');
       }
     }
   }
@@ -466,5 +490,14 @@ extension LocalVideoTrackExt on LocalVideoTrack {
 
     simulcastCodecs[codec] = simulcastCodecInfo;
     return simulcastCodecInfo;
+  }
+
+  void setDegradationPreference(DegradationPreference preference) {
+    final params = sender?.parameters;
+    if (params == null) {
+      return;
+    }
+    params.degradationPreference = preference.toRTCType();
+    sender?.setParameters(params);
   }
 }

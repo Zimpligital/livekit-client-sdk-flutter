@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,18 @@
 
 import 'dart:js' as js;
 
+import 'package:flutter/foundation.dart';
+
 import 'package:platform_detect/platform_detect.dart';
 
 import '../platform.dart';
 
 PlatformType lkPlatformImplementation() => PlatformType.web;
+
+bool lkPlatformIsWebMobileImplementation() {
+  return (defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.android);
+}
 
 bool lkE2EESupportedImplementation() {
   return isInsertableStreamSupported() || isScriptTransformSupported();
@@ -41,3 +48,6 @@ BrowserType lkBrowserImplementation() {
   if (browser.isWKWebView) return BrowserType.wkWebView;
   return BrowserType.unknown;
 }
+
+BrowserVersion lkBrowserVersionImplementation() => BrowserVersion(
+    browser.version.major, browser.version.minor, browser.version.patch);

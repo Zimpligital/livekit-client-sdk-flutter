@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,15 +38,24 @@ extension CameraPositionExt on CameraPosition {
 class CameraCaptureOptions extends VideoCaptureOptions {
   final CameraPosition cameraPosition;
 
+  /// set to false to only toggle enabled instead of stop/replaceTrack for muting
+  final bool stopCameraCaptureOnMute;
+
   const CameraCaptureOptions({
     this.cameraPosition = CameraPosition.front,
     String? deviceId,
     double? maxFrameRate,
     VideoParameters params = VideoParametersPresets.h720_169,
-  }) : super(params: params, deviceId: deviceId, maxFrameRate: maxFrameRate);
+    this.stopCameraCaptureOnMute = true,
+  }) : super(
+          params: params,
+          deviceId: deviceId,
+          maxFrameRate: maxFrameRate,
+        );
 
   CameraCaptureOptions.from({required VideoCaptureOptions captureOptions})
       : cameraPosition = CameraPosition.front,
+        stopCameraCaptureOnMute = true,
         super(
           params: captureOptions.params,
           deviceId: captureOptions.deviceId,
@@ -82,12 +91,15 @@ class CameraCaptureOptions extends VideoCaptureOptions {
     CameraPosition? cameraPosition,
     String? deviceId,
     double? maxFrameRate,
+    bool? stopCameraCaptureOnMute,
   }) =>
       CameraCaptureOptions(
         params: params ?? this.params,
         cameraPosition: cameraPosition ?? this.cameraPosition,
         deviceId: deviceId ?? this.deviceId,
         maxFrameRate: maxFrameRate ?? this.maxFrameRate,
+        stopCameraCaptureOnMute:
+            stopCameraCaptureOnMute ?? this.stopCameraCaptureOnMute,
       );
 }
 
@@ -126,6 +138,7 @@ class ScreenShareCaptureOptions extends VideoCaptureOptions {
       : super(params: captureOptions.params);
 
   ScreenShareCaptureOptions copyWith({
+    bool? useiOSBroadcastExtension,
     bool? captureScreenAudio,
     VideoParameters? params,
     String? sourceId,
@@ -134,6 +147,8 @@ class ScreenShareCaptureOptions extends VideoCaptureOptions {
     String? selfBrowserSurface,
   }) =>
       ScreenShareCaptureOptions(
+        useiOSBroadcastExtension:
+            useiOSBroadcastExtension ?? this.useiOSBroadcastExtension,
         captureScreenAudio: captureScreenAudio ?? this.captureScreenAudio,
         params: params ?? this.params,
         sourceId: sourceId ?? deviceId,
@@ -232,6 +247,9 @@ class AudioCaptureOptions extends LocalTrackOptions {
   /// Defaults to true.
   final bool typingNoiseDetection;
 
+  /// set to false to only toggle enabled instead of stop/replaceTrack for muting
+  final bool stopAudioCaptureOnMute;
+
   const AudioCaptureOptions({
     this.deviceId,
     this.noiseSuppression = true,
@@ -239,6 +257,7 @@ class AudioCaptureOptions extends LocalTrackOptions {
     this.autoGainControl = true,
     this.highPassFilter = false,
     this.typingNoiseDetection = true,
+    this.stopAudioCaptureOnMute = true,
   });
 
   @override
@@ -250,10 +269,12 @@ class AudioCaptureOptions extends LocalTrackOptions {
     if (!kIsWeb || (kIsWeb && deviceId == null)) {
       constraints['optional'] = <Map<String, dynamic>>[
         <String, dynamic>{'echoCancellation': echoCancellation},
+        <String, dynamic>{'noiseSuppression': noiseSuppression},
+        <String, dynamic>{'autoGainControl': autoGainControl},
+        <String, dynamic>{'voiceIsolation': noiseSuppression},
         <String, dynamic>{'googDAEchoCancellation': echoCancellation},
         <String, dynamic>{'googEchoCancellation': echoCancellation},
         <String, dynamic>{'googEchoCancellation2': echoCancellation},
-        <String, dynamic>{'noiseSuppression': noiseSuppression},
         <String, dynamic>{'googNoiseSuppression': noiseSuppression},
         <String, dynamic>{'googNoiseSuppression2': noiseSuppression},
         <String, dynamic>{'googAutoGainControl': autoGainControl},

@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+// ignore_for_file: deprecated_member_use_from_same_package
 
 import 'dart:async';
 
@@ -34,13 +36,13 @@ import '../participant/participant.dart';
 import '../participant/remote.dart';
 import '../proto/livekit_models.pb.dart' as lk_models;
 import '../proto/livekit_rtc.pb.dart' as lk_rtc;
-import '../support/app_state.dart';
 import '../support/disposable.dart';
 import '../support/platform.dart';
 import '../track/local/audio.dart';
 import '../track/local/video.dart';
 import '../track/track.dart';
 import '../types/other.dart';
+import '../utils.dart';
 import 'engine.dart';
 
 import '../track/web/_audio_api.dart'
@@ -62,10 +64,11 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
   ConnectOptions get connectOptions => engine.connectOptions;
   RoomOptions get roomOptions => engine.roomOptions;
 
-  /// map of SID to RemoteParticipant
-  UnmodifiableMapView<String, RemoteParticipant> get participants =>
-      UnmodifiableMapView(_participants);
-  final _participants = <String, RemoteParticipant>{};
+  /// map of identity: [[RemoteParticipant]]
+  UnmodifiableMapView<String, RemoteParticipant> get remoteParticipants =>
+      UnmodifiableMapView(_remoteParticipants);
+  final _remoteParticipants = <String, RemoteParticipant>{};
+  final Map<String, String> _sidToIdentity = <String, String>{};
 
   /// the current participant
   LocalParticipant? get localParticipant => _localParticipant;
@@ -74,10 +77,6 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
   /// name of the room
   String? get name => _name;
   String? _name;
-
-  /// sid of the room
-  String? get sid => _sid;
-  String? _sid;
 
   /// metadata of the room
   String? get metadata => _metadata;
@@ -98,6 +97,8 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
   bool _isRecording = false;
   bool _audioEnabled = true;
 
+  lk_models.Room? _roomInfo;
+
   /// a list of participants that are actively speaking, including local participant.
   UnmodifiableListView<Participant> get activeSpeakers =>
       UnmodifiableListView<Participant>(_activeSpeakers);
@@ -109,27 +110,18 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
   //
   late EventsListener<SignalEvent> _signalListener;
 
-  StreamSubscription<String>? _appCloseSubscription;
-
   Room({
+    @Deprecated('deprecated, please use connectOptions in room.connect()')
     ConnectOptions connectOptions = const ConnectOptions(),
     RoomOptions roomOptions = const RoomOptions(),
     Engine? engine,
   }) : engine = engine ??
             Engine(
-              connectOptions: connectOptions,
               roomOptions: roomOptions,
             ) {
     //
     _engineListener = this.engine.createListener();
     _setUpEngineListeners();
-
-    if (!kIsWeb && !lkPlatformIsTest()) {
-      _appCloseSubscription =
-          AppStateListener.instance.onWindowShouldClose.stream.listen((event) {
-        disconnect();
-      });
-    }
 
     _signalListener = this.engine.signalClient.createListener();
     _setUpSignalListeners();
@@ -153,8 +145,6 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
       await _engineListener.dispose();
       // dispose the engine
       await this.engine.dispose();
-      // dispose the app state listener
-      await _appCloseSubscription?.cancel();
     });
   }
 
@@ -162,18 +152,29 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     String url,
     String token, {
     ConnectOptions? connectOptions,
+    @Deprecated('deprecated, please use roomOptions in Room constructor')
     RoomOptions? roomOptions,
     FastConnectOptions? fastConnectOptions,
-  }) {
-    roomOptions ??= this.roomOptions;
+  }) async {
+    var roomOptions = this.roomOptions;
+    connectOptions ??= ConnectOptions();
     if (roomOptions.e2eeOptions != null) {
       if (!lkPlatformSupportsE2EE()) {
         throw LiveKitE2EEException('E2EE is not supported on this platform');
       }
       _e2eeManager = E2EEManager(roomOptions.e2eeOptions!.keyProvider);
-      _e2eeManager!.setup(this);
+      await _e2eeManager!.setup(this);
+
+      // Disable backup codec when e2ee is enabled
+      roomOptions = roomOptions.copyWith(
+        defaultVideoPublishOptions:
+            roomOptions.defaultVideoPublishOptions.copyWith(
+          backupVideoCodec: const BackupVideoCodec(enabled: false),
+        ),
+      );
     }
-    return engine.connect(
+
+    await engine.connect(
       url,
       token,
       connectOptions: connectOptions,
@@ -184,7 +185,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
 
   void _setUpSignalListeners() => _signalListener
     ..on<SignalJoinResponseEvent>((event) {
-      _sid = event.response.room.sid;
+      _roomInfo = event.response.room;
       _name = event.response.room.name;
       _metadata = event.response.room.metadata;
       _serverVersion = event.response.serverVersion;
@@ -204,17 +205,18 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         info: event.response.participant,
       );
 
-      if (engine.fullReconnect) {
+      if (engine.fullReconnectOnNext) {
         _localParticipant!.updateFromInfo(event.response.participant);
       }
 
       if (connectOptions.protocolVersion.index >= ProtocolVersion.v8.index &&
           engine.fastConnectOptions != null &&
-          !engine.fullReconnect) {
+          !engine.fullReconnectOnNext) {
         var options = engine.fastConnectOptions!;
 
         var audio = options.microphone;
-        if (audio.enabled != null && audio.enabled == true) {
+        bool audioEnabled = audio.enabled == true || audio.track != null;
+        if (audioEnabled) {
           if (audio.track != null) {
             _localParticipant!.publishAudioTrack(audio.track as LocalAudioTrack,
                 publishOptions: roomOptions.defaultAudioPublishOptions);
@@ -225,7 +227,8 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         }
 
         var video = options.camera;
-        if (video.enabled != null && video.enabled == true) {
+        bool videoEnabled = video.enabled == true || video.track != null;
+        if (videoEnabled) {
           if (video.track != null) {
             _localParticipant!.publishVideoTrack(video.track as LocalVideoTrack,
                 publishOptions: roomOptions.defaultVideoPublishOptions);
@@ -236,7 +239,8 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         }
 
         var screen = options.screen;
-        if (screen.enabled != null && screen.enabled == true) {
+        bool screenEnabled = screen.enabled == true || screen.track != null;
+        if (screenEnabled) {
           if (screen.track != null) {
             _localParticipant!.publishVideoTrack(
                 screen.track as LocalVideoTrack,
@@ -250,9 +254,10 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
       }
 
       for (final info in event.response.otherParticipants) {
-        logger.fine('Creating RemoteParticipant: ${info.sid}(${info.identity}) '
+        logger.fine(
+            'Creating RemoteParticipant: sid = ${info.sid}(identity:${info.identity}) '
             'tracks:${info.tracks.map((e) => e.sid)}');
-        _getOrCreateRemoteParticipant(info.sid, info);
+        _getOrCreateRemoteParticipant(info.identity, info);
       }
 
       if (e2eeManager != null && event.response.sifTrailer.isNotEmpty) {
@@ -261,6 +266,8 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
       }
 
       logger.fine('Room Connect completed');
+
+      events.emit(RoomConnectedEvent(room: this, metadata: _metadata));
     })
     ..on<SignalParticipantUpdateEvent>(
         (event) => _onParticipantUpdateEvent(event.participants))
@@ -312,12 +319,12 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
           'allowed:${event.allowed}');
 
       // find participant
-      final participant = _participants[event.participantSid];
+      final participant = _getRemoteParticipantBySid(event.participantSid);
       if (participant == null) {
         return;
       }
       // find track
-      final publication = participant.trackPublications[event.trackSid];
+      final publication = participant.getTrackPublicationBySid(event.trackSid);
       if (publication == null) {
         return;
       }
@@ -331,6 +338,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     })
     ..on<SignalRoomUpdateEvent>((event) async {
       _metadata = event.room.metadata;
+      _roomInfo = event.room;
       emitWhenConnected(
           RoomMetadataChangedEvent(metadata: event.room.metadata));
       if (_isRecording != event.room.activeRecording) {
@@ -339,68 +347,98 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
             RoomRecordingStatusChanged(activeRecording: _isRecording));
       }
     })
-    ..on<SignalConnectionStateUpdatedEvent>((event) {
-      // during reconnection, need to send sync state upon signal connection.
-      if (event.newState == ConnectionState.reconnecting) {
-        logger.fine('Sending syncState');
-        _sendSyncState();
-      }
-    })
     ..on<SignalRemoteMuteTrackEvent>((event) async {
       final publication = localParticipant?.trackPublications[event.sid];
+
+      final stopOnMute = switch (publication?.source) {
+        TrackSource.camera =>
+          roomOptions.defaultCameraCaptureOptions.stopCameraCaptureOnMute,
+        TrackSource.microphone =>
+          roomOptions.defaultAudioCaptureOptions.stopAudioCaptureOnMute,
+        _ => true,
+      };
+
       if (event.muted) {
-        await publication?.mute();
+        await publication?.mute(stopOnMute: stopOnMute);
       } else {
-        await publication?.unmute();
+        await publication?.unmute(stopOnMute: stopOnMute);
       }
     })
     ..on<SignalTrackUnpublishedEvent>((event) async {
       // unpublish local track
-      await localParticipant?.unpublishTrack(event.trackSid);
+      await localParticipant?.removePublishedTrack(event.trackSid);
     });
 
   void _setUpEngineListeners() => _engineListener
-    ..on<EngineConnectionStateUpdatedEvent>((event) async {
-      if (event.didReconnect) {
-        events.emit(const RoomReconnectedEvent());
-        // re-send tracks permissions
-        localParticipant?.sendTrackSubscriptionPermissions();
-      } else if (event.fullReconnect &&
-          event.newState == ConnectionState.connecting) {
-        events.emit(const RoomRestartingEvent());
-        // clean up RemoteParticipants
-        for (final participant in _participants.values) {
-          events.emit(ParticipantDisconnectedEvent(participant: participant));
-          await participant.dispose();
-        }
-        _participants.clear();
-        _activeSpeakers.clear();
-        // reset params
-        _name = null;
-        _sid = null;
-        _metadata = null;
-        _serverVersion = null;
-        _serverRegion = null;
-      } else if (event.fullReconnect &&
-          event.newState == ConnectionState.connected) {
-        events.emit(const RoomRestartedEvent());
-        await _handlePostReconnect(event.fullReconnect);
-      } else if (event.newState == ConnectionState.reconnecting) {
-        events.emit(const RoomReconnectingEvent());
-      } else if (event.newState == ConnectionState.disconnected) {
-        if (!event.fullReconnect) {
-          await _cleanUp();
-          events.emit(RoomDisconnectedEvent(reason: event.disconnectReason));
-        }
-      }
-      // always notify ChangeNotifier
+    ..on<EngineResumedEvent>((event) async {
+      // re-send tracks permissions
+      localParticipant?.sendTrackSubscriptionPermissions();
       notifyListeners();
     })
-    ..on<RoomRestartingEvent>((event) {})
-    ..on<RoomRestartedEvent>((event) {})
+    ..on<EngineFullRestartingEvent>((event) async {
+      events.emit(const RoomReconnectingEvent());
+
+      // clean up RemoteParticipants
+      var copy = _remoteParticipants.values.toList();
+
+      _remoteParticipants.clear();
+      _sidToIdentity.clear();
+      _activeSpeakers.clear();
+      // reset params
+      _name = null;
+      _metadata = null;
+      _serverVersion = null;
+      _serverRegion = null;
+
+      for (final participant in copy) {
+        events.emit(ParticipantDisconnectedEvent(participant: participant));
+        await participant.removeAllPublishedTracks(notify: false);
+        await participant.dispose();
+      }
+      notifyListeners();
+    })
+    ..on<EngineRestartedEvent>((event) async {
+      // re-publish all tracks
+      await localParticipant?.rePublishAllTracks();
+
+      for (var participant in remoteParticipants.values) {
+        for (var pub in participant.trackPublications.values) {
+          if (pub.subscribed) {
+            pub.sendUpdateTrackSettings();
+          }
+        }
+      }
+      events.emit(const RoomReconnectedEvent());
+      notifyListeners();
+    })
+    ..on<EngineResumingEvent>((event) async {
+      await _sendSyncState();
+      notifyListeners();
+    })
+    ..on<EngineAttemptReconnectEvent>((event) async {
+      events.emit(RoomAttemptReconnectEvent(
+        attempt: event.attempt,
+        maxAttemptsRetry: event.maxAttempts,
+        nextRetryDelaysInMs: event.nextRetryDelaysInMs,
+      ));
+      notifyListeners();
+    })
+    ..on<EngineDisconnectedEvent>((event) async {
+      if (!engine.fullReconnectOnNext &&
+          ![
+            DisconnectReason.signalingConnectionFailure,
+            DisconnectReason.joinFailure,
+            DisconnectReason.noInternetConnection
+          ].contains(event.reason)) {
+        await _cleanUp();
+        events.emit(RoomDisconnectedEvent(reason: event.reason));
+        notifyListeners();
+      }
+    })
     ..on<EngineActiveSpeakersUpdateEvent>(
         (event) => _onEngineActiveSpeakersUpdateEvent(event.speakers))
     ..on<EngineDataPacketReceivedEvent>(_onDataMessageEvent)
+    ..on<EngineTranscriptionReceivedEvent>(_onTranscriptionEvent)
     ..on<AudioPlaybackStarted>((event) {
       _handleAudioPlaybackStarted();
     })
@@ -410,15 +448,30 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     ..on<EngineTrackAddedEvent>((event) async {
       logger.fine('EngineTrackAddedEvent trackSid:${event.track.id}');
 
-      final idParts = event.stream.id.split('|');
+      final idParts = unpackStreamId(event.stream.id);
       final participantSid = idParts[0];
-      final trackSid = idParts.elementAtOrNull(1) ?? event.track.id;
-      final participant = _getOrCreateRemoteParticipant(participantSid, null);
+      var streamId = idParts[1];
+      var trackSid = event.track.id;
+
+      // firefox will get streamId (pID|trackId) instead of (pID|streamId) as it doesn't support sync tracks by stream
+      // and generates its own track id instead of infer from sdp track id.
+      if (streamId.isNotEmpty && streamId.startsWith('TR')) {
+        trackSid = streamId;
+      }
+
+      final participant = _getRemoteParticipantBySid(participantSid);
       try {
         if (trackSid == null || trackSid.isEmpty) {
           throw TrackSubscriptionExceptionEvent(
             participant: participant,
             reason: TrackSubscribeFailReason.invalidServerResponse,
+          );
+        }
+        if (participant == null) {
+          throw TrackSubscriptionExceptionEvent(
+            participant: participant,
+            sid: trackSid,
+            reason: TrackSubscribeFailReason.noParticipantFound,
           );
         }
         await participant.addSubscribedMediaTrack(
@@ -430,7 +483,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
         );
       } on TrackSubscriptionExceptionEvent catch (event) {
         logger.severe('addSubscribedMediaTrack() throwed ${event}');
-        [participant.room.events, participant.events].emit(event);
+        events.emit(event);
       } catch (exception) {
         // We don't want to pass up any exception so catch everything here.
         logger.warning(
@@ -440,9 +493,14 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
 
   /// Disconnects from the room, notifying server of disconnection.
   Future<void> disconnect() async {
-    if (connectionState != ConnectionState.disconnected) {
-      engine.signalClient.sendLeave();
+    if (engine.isClosed &&
+        engine.connectionState == ConnectionState.disconnected) {
+      events.emit(RoomDisconnectedEvent(reason: DisconnectReason.unknown));
+      return;
     }
+    await engine.disconnect();
+    await _engineListener.waitFor<EngineDisconnectedEvent>(
+        duration: const Duration(seconds: 10));
     await _cleanUp();
   }
 
@@ -454,9 +512,25 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     }
   }
 
+  /// retrieves a participant by identity
+  Participant? getParticipantByIdentity(String identity) {
+    if (_localParticipant?.identity == identity) {
+      return _localParticipant;
+    }
+    return remoteParticipants[identity];
+  }
+
+  RemoteParticipant? _getRemoteParticipantBySid(String sid) {
+    final identity = _sidToIdentity[sid];
+    if (identity != null) {
+      return remoteParticipants[identity];
+    }
+    return null;
+  }
+
   RemoteParticipant _getOrCreateRemoteParticipant(
-      String sid, lk_models.ParticipantInfo? info) {
-    RemoteParticipant? participant = _participants[sid];
+      String identity, lk_models.ParticipantInfo? info) {
+    RemoteParticipant? participant = _remoteParticipants[identity];
     if (participant != null) {
       if (info != null) {
         participant.updateFromInfo(info);
@@ -465,11 +539,11 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     }
 
     if (info == null) {
-      logger.warning('RemoteParticipant.info is null trackSid: $sid');
+      logger.warning('RemoteParticipant.info is null identity: $identity');
       participant = RemoteParticipant(
         room: this,
-        sid: sid,
-        identity: '',
+        sid: '',
+        identity: identity,
         name: '',
       );
     } else {
@@ -479,8 +553,8 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
       );
     }
 
-    _participants[sid] = participant;
-
+    _remoteParticipants[identity] = participant;
+    _sidToIdentity[participant.sid] = identity;
     return participant;
   }
 
@@ -489,26 +563,29 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     // trigger change notifier only if list of participants membership is changed
     var hasChanged = false;
     for (final info in updates) {
-      if (localParticipant?.sid == info.sid) {
-        localParticipant?.updateFromInfo(info);
+      if (localParticipant?.identity == info.identity) {
+        await localParticipant?.updateFromInfo(info);
         continue;
       }
+
+      final isNew = !_remoteParticipants.containsKey(info.identity);
 
       if (info.state == lk_models.ParticipantInfo_State.DISCONNECTED) {
-        hasChanged = true;
-        await _handleParticipantDisconnect(info.sid);
+        hasChanged = await _handleParticipantDisconnect(info.identity);
         continue;
       }
 
-      final isNew = !_participants.containsKey(info.sid);
-      final participant = _getOrCreateRemoteParticipant(info.sid, info);
+      final participant = _getOrCreateRemoteParticipant(info.identity, info);
 
       if (isNew) {
         hasChanged = true;
         // fire connected event
         emitWhenConnected(ParticipantConnectedEvent(participant: participant));
       } else {
-        await participant.updateFromInfo(info);
+        final wasUpdated = await participant.updateFromInfo(info);
+        if (wasUpdated) {
+          _sidToIdentity[info.sid] = info.identity;
+        }
       }
     }
 
@@ -518,13 +595,12 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
   }
 
   void _onSignalSpeakersChangedEvent(List<lk_models.SpeakerInfo> speakers) {
-    //
     final lastSpeakers = {
       for (final p in _activeSpeakers) p.sid: p,
     };
 
     for (final speaker in speakers) {
-      Participant? p = _participants[speaker.sid];
+      Participant? p = _getRemoteParticipantBySid(speaker.sid);
       if (speaker.sid == localParticipant?.sid) p = localParticipant;
       if (p == null) continue;
 
@@ -552,7 +628,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     // localParticipant & remote participants
     final allParticipants = <String, Participant>{
       if (localParticipant != null) localParticipant!.sid: localParticipant!,
-      ..._participants,
+      ..._remoteParticipants,
     };
 
     for (final speaker in speakers) {
@@ -584,7 +660,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
       if (entry.participantSid == localParticipant?.sid) {
         participant = localParticipant;
       } else {
-        participant = _participants[entry.participantSid];
+        participant = _getRemoteParticipantBySid(entry.participantSid);
       }
 
       if (participant != null) {
@@ -598,7 +674,7 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
       List<lk_rtc.StreamStateInfo> updates) async {
     for (final update in updates) {
       // try to find RemoteParticipant
-      final participant = participants[update.participantSid];
+      final participant = remoteParticipants[update.participantSid];
       if (participant == null) continue;
       // try to find RemoteTrackPublication
       final trackPublication = participant.trackPublications[update.trackSid];
@@ -613,12 +689,44 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     }
   }
 
+  void _onTranscriptionEvent(EngineTranscriptionReceivedEvent event) {
+    final participant = getParticipantByIdentity(
+        event.transcription.transcribedParticipantIdentity);
+    if (participant == null) {
+      return;
+    }
+
+    final publication =
+        participant.getTrackPublicationBySid(event.transcription.trackId);
+
+    var segments = event.transcription.segments.map((e) {
+      return TranscriptionSegment(
+        text: e.text,
+        id: e.id,
+        startTime: DateTime.fromMillisecondsSinceEpoch(e.startTime.toInt()),
+        endTime: DateTime.fromMillisecondsSinceEpoch(e.endTime.toInt()),
+        isFinal: e.final_5,
+        language: e.language,
+      );
+    }).toList();
+
+    final transcription = TranscriptionEvent(
+      participant: participant,
+      publication: publication,
+      segments: segments,
+    );
+
+    participant.events.emit(transcription);
+    events.emit(transcription);
+  }
+
   void _onDataMessageEvent(EngineDataPacketReceivedEvent dataPacketEvent) {
     // participant may be null if data is sent from Server-API
     final senderSid = dataPacketEvent.packet.participantSid;
     RemoteParticipant? senderParticipant;
     if (senderSid.isNotEmpty) {
-      senderParticipant = participants[dataPacketEvent.packet.participantSid];
+      senderParticipant =
+          _getRemoteParticipantBySid(dataPacketEvent.packet.participantSid);
     }
 
     // participant.delegate?.onDataReceived(participant, event.packet.payload);
@@ -633,44 +741,44 @@ class Room extends DisposableChangeNotifier with EventsEmittable<RoomEvent> {
     events.emit(event);
   }
 
-  Future<void> _handleParticipantDisconnect(String sid) async {
-    final participant = _participants.remove(sid);
+  Future<bool> _handleParticipantDisconnect(String identity) async {
+    final participant = _remoteParticipants.remove(identity);
     if (participant == null) {
-      return;
+      return false;
     }
 
-    await participant.unpublishAllTracks(notify: true);
+    await participant.removeAllPublishedTracks(notify: true);
 
     emitWhenConnected(ParticipantDisconnectedEvent(participant: participant));
+    return true;
   }
 
   Future<void> _sendSyncState() async {
-    final sendUnSub = connectOptions.autoSubscribe;
-    final participantTracks =
-        participants.values.map((e) => e.participantTracks());
-    engine.sendSyncState(
-      subscription: lk_rtc.UpdateSubscription(
-        participantTracks: participantTracks,
-        // Deprecated
-        trackSids: participantTracks.map((e) => e.trackSids).flattened,
-        subscribe: !sendUnSub,
-      ),
-      publishTracks: localParticipant?.publishedTracksInfo(),
-    );
-  }
+    final autoSubscribe = connectOptions.autoSubscribe;
 
-  Future<void> _handlePostReconnect(bool isFullReconnect) async {
-    if (isFullReconnect) {
-      // re-publish all tracks
-      await localParticipant?.rePublishAllTracks();
-    }
-    for (var participant in participants.values) {
-      for (var pub in participant.trackPublications.values) {
-        if (pub.subscribed) {
-          pub.sendUpdateTrackSettings();
+    final trackSids = <String>[];
+    final trackSidsDisabled = <String>[];
+
+    for (var participant in remoteParticipants.values) {
+      for (var track in participant.trackPublications.values) {
+        if (track.subscribed != autoSubscribe) {
+          trackSids.add(track.sid);
+        }
+        if (!track.enabled) {
+          trackSidsDisabled.add(track.sid);
         }
       }
     }
+
+    engine.sendSyncState(
+      subscription: lk_rtc.UpdateSubscription(
+        participantTracks: [],
+        trackSids: trackSids,
+        subscribe: !autoSubscribe,
+      ),
+      trackSidsDisabled: trackSidsDisabled,
+      publishTracks: localParticipant?.publishedTracksInfo(),
+    );
   }
 }
 
@@ -680,12 +788,14 @@ extension RoomPrivateMethods on Room {
     logger.fine('[${objectId}] cleanUp()');
 
     // clean up RemoteParticipants
-    var participants = _participants.values.toList();
+    var participants = _remoteParticipants.values.toList();
     for (final participant in participants) {
+      await participant.removeAllPublishedTracks(notify: false);
       // RemoteParticipant is responsible for disposing resources
       await participant.dispose();
     }
-    _participants.clear();
+    _remoteParticipants.clear();
+    _sidToIdentity.clear();
 
     // clean up LocalParticipant
     await localParticipant?.unpublishAllTracks();
@@ -697,7 +807,6 @@ extension RoomPrivateMethods on Room {
 
     // reset params
     _name = null;
-    _sid = null;
     _metadata = null;
     _serverVersion = null;
     _serverRegion = null;
@@ -708,6 +817,34 @@ extension RoomPrivateMethods on Room {
     if (connectionState == ConnectionState.connected) {
       events.emit(event);
     }
+  }
+
+  /// server assigned unique room id.
+  /// returns once a sid has been issued by the server.
+  Future<String> getSid() async {
+    if (engine.connectionState == ConnectionState.disconnected) {
+      return '';
+    }
+
+    if (_roomInfo != null && _roomInfo!.sid.isNotEmpty) {
+      return _roomInfo!.sid;
+    }
+
+    final completer = Completer<String>();
+
+    events.on<SignalRoomUpdateEvent>((event) {
+      if (event.room.sid.isNotEmpty && !completer.isCompleted) {
+        completer.complete(event.room.sid);
+      }
+    });
+
+    events.once<RoomDisconnectedEvent>((event) {
+      if (!completer.isCompleted) {
+        completer.complete('');
+      }
+    });
+
+    return completer.future;
   }
 }
 
@@ -720,8 +857,15 @@ extension RoomDebugMethods on Room {
     bool? serverLeave,
     bool? switchCandidate,
     bool? signalReconnect,
+    bool? fullReconnect,
+    int? subscriberBandwidth,
   }) async {
     if (signalReconnect != null && signalReconnect) {
+      await engine.signalClient.cleanUp();
+      return;
+    }
+    if (fullReconnect != null && fullReconnect) {
+      engine.fullReconnectOnNext = true;
       await engine.signalClient.cleanUp();
       return;
     }
@@ -757,8 +901,8 @@ extension RoomHardwareManagementMethods on Room {
   /// Set audio output device.
   Future<void> setAudioOutputDevice(MediaDevice device) async {
     if (lkPlatformIs(PlatformType.web)) {
-      participants.forEach((_, participant) {
-        for (var audioTrack in participant.audioTracks) {
+      remoteParticipants.forEach((_, participant) {
+        for (var audioTrack in participant.audioTrackPublications) {
           audioTrack.track?.setSinkId(device.deviceId);
         }
       });
@@ -776,7 +920,7 @@ extension RoomHardwareManagementMethods on Room {
   /// Set audio input device.
   Future<void> setAudioInputDevice(MediaDevice device) async {
     if (lkPlatformIs(PlatformType.web) && localParticipant != null) {
-      for (var audioTrack in localParticipant!.audioTracks) {
+      for (var audioTrack in localParticipant!.audioTrackPublications) {
         await audioTrack.track?.setDeviceId(device.deviceId);
       }
       Hardware.instance.selectedAudioInput = device;
@@ -793,7 +937,7 @@ extension RoomHardwareManagementMethods on Room {
 
   /// Set video input device.
   Future<void> setVideoInputDevice(MediaDevice device) async {
-    final track = localParticipant?.videoTracks.firstOrNull?.track;
+    final track = localParticipant?.videoTrackPublications.firstOrNull?.track;
     if (track == null) return;
     if (selectedVideoInputDeviceId != device.deviceId) {
       await track.switchCamera(device.deviceId);

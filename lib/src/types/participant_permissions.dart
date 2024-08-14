@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 import 'package:meta/meta.dart';
 
+import 'package:livekit_client/src/proto/livekit_models.pbenum.dart';
 import '../proto/livekit_models.pb.dart' as lk_models;
 
 @immutable
@@ -22,14 +23,16 @@ class ParticipantPermissions {
   final bool canPublish;
   final bool canPublishData;
   final bool hidden;
-  final bool recorder;
+  final bool canUpdateMetadata;
+  final List<TrackSource> canPublishSources;
 
   const ParticipantPermissions({
     this.canSubscribe = false,
     this.canPublish = false,
     this.canPublishData = false,
     this.hidden = false,
-    this.recorder = false,
+    this.canUpdateMetadata = false,
+    this.canPublishSources = const [],
   });
 }
 
@@ -39,6 +42,7 @@ extension ParticipantPermissionExt on lk_models.ParticipantPermission {
         canPublish: canPublish,
         canPublishData: canPublishData,
         hidden: hidden,
-        recorder: recorder,
+        canUpdateMetadata: canUpdateMetadata,
+        canPublishSources: canPublishSources,
       );
 }

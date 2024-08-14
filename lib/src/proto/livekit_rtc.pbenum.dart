@@ -70,4 +70,50 @@ class CandidateProtocol extends $pb.ProtobufEnum {
   const CandidateProtocol._($core.int v, $core.String n) : super(v, n);
 }
 
+/// indicates action clients should take on receiving this message
+class LeaveRequest_Action extends $pb.ProtobufEnum {
+  static const LeaveRequest_Action DISCONNECT =
+      LeaveRequest_Action._(0, _omitEnumNames ? '' : 'DISCONNECT');
+  static const LeaveRequest_Action RESUME =
+      LeaveRequest_Action._(1, _omitEnumNames ? '' : 'RESUME');
+  static const LeaveRequest_Action RECONNECT =
+      LeaveRequest_Action._(2, _omitEnumNames ? '' : 'RECONNECT');
+
+  static const $core.List<LeaveRequest_Action> values = <LeaveRequest_Action>[
+    DISCONNECT,
+    RESUME,
+    RECONNECT,
+  ];
+
+  static final $core.Map<$core.int, LeaveRequest_Action> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static LeaveRequest_Action? valueOf($core.int value) => _byValue[value];
+
+  const LeaveRequest_Action._($core.int v, $core.String n) : super(v, n);
+}
+
+class ErrorResponse_Reason extends $pb.ProtobufEnum {
+  static const ErrorResponse_Reason UNKNOWN =
+      ErrorResponse_Reason._(0, _omitEnumNames ? '' : 'UNKNOWN');
+  static const ErrorResponse_Reason NOT_FOUND =
+      ErrorResponse_Reason._(1, _omitEnumNames ? '' : 'NOT_FOUND');
+  static const ErrorResponse_Reason NOT_ALLOWED =
+      ErrorResponse_Reason._(2, _omitEnumNames ? '' : 'NOT_ALLOWED');
+  static const ErrorResponse_Reason INVALID_ARGUMENT =
+      ErrorResponse_Reason._(3, _omitEnumNames ? '' : 'INVALID_ARGUMENT');
+
+  static const $core.List<ErrorResponse_Reason> values = <ErrorResponse_Reason>[
+    UNKNOWN,
+    NOT_FOUND,
+    NOT_ALLOWED,
+    INVALID_ARGUMENT,
+  ];
+
+  static final $core.Map<$core.int, ErrorResponse_Reason> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static ErrorResponse_Reason? valueOf($core.int value) => _byValue[value];
+
+  const ErrorResponse_Reason._($core.int v, $core.String n) : super(v, n);
+}
+
 const _omitEnumNames = $core.bool.fromEnvironment('protobuf.omit_enum_names');

@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -240,9 +240,9 @@ class Utils {
         encoding: VideoEncoding(
           maxBitrate: math.max(
             150 * 1000,
-            (original.encoding.maxBitrate /
+            (original.encoding!.maxBitrate /
                     (math.pow(scale, 2) *
-                        (original.encoding.maxFramerate / fps)))
+                        (original.encoding!.maxFramerate / fps)))
                 .floor(),
           ),
           maxFramerate: fps,
@@ -274,13 +274,13 @@ class Utils {
     String? codec,
   }) {
     assert(presets.isNotEmpty, 'presets should not be empty');
-    VideoEncoding result = presets.first.encoding;
+    VideoEncoding result = presets.first.encoding!;
 
     // handle portrait by swapping dimensions
     final size = dimensions.max();
 
     for (final preset in presets) {
-      result = preset.encoding;
+      result = preset.encoding!;
       if (preset.dimensions.width >= size) break;
     }
 
@@ -319,11 +319,12 @@ class Utils {
       }
       final size = dimensions.min();
       final rid = videoRids[i];
-
-      result.add(e.encoding.toRTCRtpEncoding(
-        rid: rid,
-        scaleResolutionDownBy: math.max(1, size / e.dimensions.min()),
-      ));
+      if (e.encoding != null) {
+        result.add(e.encoding!.toRTCRtpEncoding(
+          rid: rid,
+          scaleResolutionDownBy: math.max(1, size / e.dimensions.min()),
+        ));
+      }
     });
     return result;
   }
@@ -336,27 +337,20 @@ class Utils {
     var connectivityResult = await (Connectivity().checkConnectivity());
     // wifi, wired, cellular, vpn, empty if not known
     String networkType = 'empty';
-    switch (connectivityResult) {
-      case ConnectivityResult.mobile:
-        networkType = 'cellular';
-        break;
-      case ConnectivityResult.wifi:
-        networkType = 'wifi';
-        break;
-      case ConnectivityResult.bluetooth:
-        networkType = 'bluetooth';
-        break;
-      case ConnectivityResult.ethernet:
-        networkType = 'wired';
-        break;
-      case ConnectivityResult.other:
-      case ConnectivityResult.vpn:
-        //TODO: will livekit-server handle vpn and other types correctly?
-        //  networkType = 'vpn';
-        break;
-      case ConnectivityResult.none:
-        networkType = 'empty';
-        break;
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      networkType = 'empty';
+    } else if (connectivityResult.contains(ConnectivityResult.mobile)) {
+      networkType = 'cellular';
+    } else if (connectivityResult.contains(ConnectivityResult.wifi)) {
+      networkType = 'wifi';
+    } else if (connectivityResult.contains(ConnectivityResult.ethernet)) {
+      networkType = 'wired';
+    } else if (connectivityResult.contains(ConnectivityResult.bluetooth)) {
+      networkType = 'bluetooth';
+    } else if (connectivityResult.contains(ConnectivityResult.other)) {
+      networkType = 'other';
+    } else if (connectivityResult.contains(ConnectivityResult.vpn)) {
+      networkType = 'vpn';
     }
     return networkType;
   }
@@ -397,6 +391,11 @@ class Utils {
     options ??= const VideoPublishOptions();
 
     VideoEncoding? videoEncoding = options.videoEncoding;
+
+    if (isScreenShare) {
+      videoEncoding = options.screenShareEncoding;
+    }
+
     var scalabilityMode = options.scalabilityMode;
 
     if ((videoEncoding == null &&
@@ -432,23 +431,23 @@ class Utils {
 
     if (scalabilityMode != null && isSVCCodec(options.videoCodec)) {
       logger.info('using svc with scalabilityMode ${scalabilityMode}');
-
-      //final sm = ScalabilityMode(scalabilityMode);
-
-      List<rtc.RTCRtpEncoding> encodings = [videoEncoding.toRTCRtpEncoding()];
-      /*
-      if (sm.spatial > 3) {
-        throw Exception('unsupported scalabilityMode: ${scalabilityMode}');
+      List<rtc.RTCRtpEncoding> encodings = [];
+      if (lkPlatformIs(PlatformType.web) &&
+          (lkBrowser() == BrowserType.safari ||
+              lkBrowser() == BrowserType.chrome &&
+                  lkBrowserVersion().major < 113)) {
+        final sm = ScalabilityMode(scalabilityMode);
+        for (var i = 0; i < sm.spatial; i += 1) {
+          // in legacy SVC, scaleResolutionDownBy cannot be set
+          encodings.add(rtc.RTCRtpEncoding(
+            rid: videoRids[2 - i],
+            maxBitrate: videoEncoding.maxBitrate ~/ math.pow(3, i),
+            maxFramerate: original.encoding!.maxFramerate,
+          ));
+        }
+      } else {
+        encodings.add(videoEncoding.toRTCRtpEncoding());
       }
-      for (int i = 0; i < sm.spatial; i += 1) {
-        encodings.add(rtc.RTCRtpEncoding(
-          rid: videoRids[2 - i],
-          maxBitrate: videoEncoding.maxBitrate ~/ math.pow(3, i),
-          maxFramerate: videoEncoding.maxFramerate,
-          scaleResolutionDownBy: null,
-          numTemporalLayers: sm.temporal.toInt(),
-        ));
-      }*/
       encodings[0].scalabilityMode = scalabilityMode;
       logger.fine('encodings $encodings');
       return encodings;
@@ -619,4 +618,82 @@ class ScalabilityMode {
   String toString() {
     return 'L${spatial}T${temporal}${suffix ?? ''}';
   }
+}
+
+String mimeTypeToVideoCodecString(String mimeType) {
+  if (!mimeType.contains('/') && mimeType.split('/').length != 2) {
+    throw Exception('Invalid mimeType: $mimeType');
+  }
+  final codec = mimeType.split('/')[1].toLowerCase();
+  if (!videoCodecs.contains(codec)) {
+    throw Exception('Video codec not supported: $codec');
+  }
+  return codec;
+}
+
+const defaultVideoCodec = 'vp8';
+const separator = '|';
+
+List<String> unpackStreamId(String packed) {
+  final parts = packed.split(separator);
+  if (parts.length > 1) {
+    return [parts[0], packed.substring(parts[0].length + 1)];
+  }
+  return [packed, ''];
+}
+
+String? buildStreamId(PublishOptions options, TrackSource source) {
+  if (options.stream == null) {
+    return null;
+  }
+  var streamId = options.stream!;
+  switch (source) {
+    case TrackSource.unknown:
+      break;
+    case TrackSource.camera:
+    case TrackSource.microphone:
+    case TrackSource.screenShareVideo:
+      streamId += 'screenshare_video';
+    case TrackSource.screenShareAudio:
+      streamId += 'screenshare_audio';
+  }
+  return streamId;
+}
+
+/// Compares two maps and returns the differences between them.
+/// [left] a map to compare.
+/// [right] a map to compare.
+Map mapDiff(Map left, Map right) {
+  final rightCopy = Map.of(right);
+  final diff = {};
+
+  left.forEach((leftKey, leftValue) {
+    if (!right.containsKey(leftKey)) {
+      diff[leftKey] = leftValue;
+      return;
+    }
+
+    final rightValue = right[leftKey];
+
+    switch ((leftValue, rightValue)) {
+      case (Map(), Map()):
+        diff[leftKey] = mapDiff(leftValue, rightValue);
+        break;
+      case (List(), List()):
+        if (!const DeepCollectionEquality().equals(leftValue, rightValue)) {
+          diff[leftKey] = rightValue;
+        }
+        break;
+      case (_, _):
+        if (leftValue != rightValue) {
+          diff[leftKey] = rightValue;
+        }
+        break;
+    }
+
+    rightCopy.remove(leftKey);
+  });
+
+  return {...diff, ...rightCopy}
+    ..removeWhere((key, value) => (value is Map && value.isEmpty));
 }

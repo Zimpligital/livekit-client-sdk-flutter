@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import 'dart:html';
 import 'dart:js' as js;
-import 'dart:js_util';
 import 'dart:typed_data';
+
+import 'package:js/js_util.dart';
+import 'package:web/web.dart' as web;
 
 import 'crypto.dart' as crypto;
 
@@ -32,10 +33,10 @@ bool isInsertableStreamSupported() {
       js.context['RTCRtpSender']['prototype']['createEncodedStreams'] != null;
 }
 
-Future<CryptoKey> importKey(
+Future<web.CryptoKey> importKey(
     Uint8List keyBytes, String algorithm, String usage) {
   // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey
-  return promiseToFuture<CryptoKey>(crypto.importKey(
+  return promiseToFuture<web.CryptoKey>(crypto.importKey(
     'raw',
     crypto.jsArrayBufferFrom(keyBytes),
     js.JsObject.jsify({'name': algorithm}),
@@ -44,10 +45,10 @@ Future<CryptoKey> importKey(
   ));
 }
 
-Future<CryptoKey> createKeyMaterialFromString(
+Future<web.CryptoKey> createKeyMaterialFromString(
     Uint8List keyBytes, String algorithm, String usage) {
   // https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/importKey
-  return promiseToFuture<CryptoKey>(crypto.importKey(
+  return promiseToFuture<web.CryptoKey>(crypto.importKey(
     'raw',
     crypto.jsArrayBufferFrom(keyBytes),
     js.JsObject.jsify({'name': 'PBKDF2'}),

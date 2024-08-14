@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,10 +41,12 @@ class LocalTrackPublication<T extends LocalTrack> extends TrackPublication<T> {
   }
 
   /// Mute the track associated with this publication
-  Future<void> mute() async => await track?.mute();
+  Future<void> mute({bool stopOnMute = true}) async =>
+      await track?.mute(stopOnMute: stopOnMute);
 
   /// Unmute the track associated with this publication
-  Future<void> unmute() async => await track?.unmute();
+  Future<void> unmute({bool stopOnMute = true}) async =>
+      await track?.unmute(stopOnMute: stopOnMute);
 
   lk_rtc.TrackPublishedResponse toPBTrackPublishedResponse() =>
       lk_rtc.TrackPublishedResponse(

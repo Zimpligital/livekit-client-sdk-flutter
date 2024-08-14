@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -19,8 +18,8 @@ class ControlsWidget extends StatefulWidget {
   const ControlsWidget(
     this.room,
     this.participant, {
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<StatefulWidget> createState() => _ControlsWidgetState();
@@ -36,7 +35,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
 
   StreamSubscription? _subscription;
 
-  bool _speakerphoneOn = false;
+  bool _speakerphoneOn = Hardware.instance.preferSpeakerOutput;
 
   @override
   void initState() {
@@ -47,7 +46,6 @@ class _ControlsWidgetState extends State<ControlsWidget> {
       _loadDevices(devices);
     });
     Hardware.instance.enumerateDevices().then(_loadDevices);
-    _speakerphoneOn = Hardware.instance.speakerOn ?? false;
   }
 
   @override
@@ -117,7 +115,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
 
   void _toggleCamera() async {
     //
-    final track = participant.videoTracks.firstOrNull?.track;
+    final track = participant.videoTrackPublications.firstOrNull?.track;
     if (track == null) return;
 
     try {
@@ -158,6 +156,11 @@ class _ControlsWidgetState extends State<ControlsWidget> {
     }
     if (lkPlatformIs(PlatformType.android)) {
       // Android specific
+      bool hasCapturePermission = await Helper.requestCapturePermission();
+      if (!hasCapturePermission) {
+        return;
+      }
+
       requestBackgroundPermission([bool isRetry = false]) async {
         // Required for android screenshare.
         try {
@@ -198,12 +201,19 @@ class _ControlsWidgetState extends State<ControlsWidget> {
       await participant.publishVideoTrack(track);
       return;
     }
+
+    if (lkPlatformIsWebMobile()) {
+      await context
+          .showErrorDialog('Screen share is not supported on mobile web');
+      return;
+    }
+
     await participant.setScreenShareEnabled(true, captureScreenAudio: true);
   }
 
   void _disableScreenShare() async {
     await participant.setScreenShareEnabled(false);
-    if (Platform.isAndroid) {
+    if (lkPlatformIs(PlatformType.android)) {
       // Android specific
       try {
         //   await FlutterBackground.disableBackgroundExecution();
@@ -240,9 +250,23 @@ class _ControlsWidgetState extends State<ControlsWidget> {
         await widget.room.e2eeManager?.ratchetKey();
       }
 
+      if (SimulateScenarioResult.participantMetadata == result) {
+        widget.room.localParticipant?.setMetadata(
+            'new metadata ${widget.room.localParticipant?.identity}');
+      }
+
+      if (SimulateScenarioResult.participantName == result) {
+        widget.room.localParticipant
+            ?.setName('new name for ${widget.room.localParticipant?.identity}');
+      }
+
       await widget.room.sendSimulateScenario(
+        speakerUpdate:
+            result == SimulateScenarioResult.speakerUpdate ? 3 : null,
         signalReconnect:
             result == SimulateScenarioResult.signalReconnect ? true : null,
+        fullReconnect:
+            result == SimulateScenarioResult.fullReconnect ? true : null,
         nodeFailure: result == SimulateScenarioResult.nodeFailure ? true : null,
         migration: result == SimulateScenarioResult.migration ? true : null,
         serverLeave: result == SimulateScenarioResult.serverLeave ? true : null,
@@ -320,7 +344,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
                           ),
                           onTap: () => _selectAudioInput(device),
                         );
-                      }).toList()
+                      })
                   ];
                 },
               )
@@ -364,7 +388,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
                         ),
                         onTap: () => _selectAudioOutput(device),
                       );
-                    }).toList()
+                    })
                 ];
               },
             ),
@@ -413,7 +437,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
                         ),
                         onTap: () => _selectVideoInput(device),
                       );
-                    }).toList()
+                    })
                 ];
               },
             )

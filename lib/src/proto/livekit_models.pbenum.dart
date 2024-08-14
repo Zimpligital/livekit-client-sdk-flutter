@@ -58,6 +58,24 @@ class VideoCodec extends $pb.ProtobufEnum {
   const VideoCodec._($core.int v, $core.String n) : super(v, n);
 }
 
+class ImageCodec extends $pb.ProtobufEnum {
+  static const ImageCodec IC_DEFAULT =
+      ImageCodec._(0, _omitEnumNames ? '' : 'IC_DEFAULT');
+  static const ImageCodec IC_JPEG =
+      ImageCodec._(1, _omitEnumNames ? '' : 'IC_JPEG');
+
+  static const $core.List<ImageCodec> values = <ImageCodec>[
+    IC_DEFAULT,
+    IC_JPEG,
+  ];
+
+  static final $core.Map<$core.int, ImageCodec> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static ImageCodec? valueOf($core.int value) => _byValue[value];
+
+  const ImageCodec._($core.int v, $core.String n) : super(v, n);
+}
+
 class TrackType extends $pb.ProtobufEnum {
   static const TrackType AUDIO = TrackType._(0, _omitEnumNames ? '' : 'AUDIO');
   static const TrackType VIDEO = TrackType._(1, _omitEnumNames ? '' : 'VIDEO');
@@ -134,11 +152,14 @@ class ConnectionQuality extends $pb.ProtobufEnum {
       ConnectionQuality._(1, _omitEnumNames ? '' : 'GOOD');
   static const ConnectionQuality EXCELLENT =
       ConnectionQuality._(2, _omitEnumNames ? '' : 'EXCELLENT');
+  static const ConnectionQuality LOST =
+      ConnectionQuality._(3, _omitEnumNames ? '' : 'LOST');
 
   static const $core.List<ConnectionQuality> values = <ConnectionQuality>[
     POOR,
     GOOD,
     EXCELLENT,
+    LOST,
   ];
 
   static final $core.Map<$core.int, ConnectionQuality> _byValue =
@@ -186,6 +207,10 @@ class DisconnectReason extends $pb.ProtobufEnum {
       DisconnectReason._(6, _omitEnumNames ? '' : 'STATE_MISMATCH');
   static const DisconnectReason JOIN_FAILURE =
       DisconnectReason._(7, _omitEnumNames ? '' : 'JOIN_FAILURE');
+  static const DisconnectReason MIGRATION =
+      DisconnectReason._(8, _omitEnumNames ? '' : 'MIGRATION');
+  static const DisconnectReason SIGNAL_CLOSE =
+      DisconnectReason._(9, _omitEnumNames ? '' : 'SIGNAL_CLOSE');
 
   static const $core.List<DisconnectReason> values = <DisconnectReason>[
     UNKNOWN_REASON,
@@ -196,6 +221,8 @@ class DisconnectReason extends $pb.ProtobufEnum {
     ROOM_DELETED,
     STATE_MISMATCH,
     JOIN_FAILURE,
+    MIGRATION,
+    SIGNAL_CLOSE,
   ];
 
   static final $core.Map<$core.int, DisconnectReason> _byValue =
@@ -253,6 +280,37 @@ class SubscriptionError extends $pb.ProtobufEnum {
   const SubscriptionError._($core.int v, $core.String n) : super(v, n);
 }
 
+class AudioTrackFeature extends $pb.ProtobufEnum {
+  static const AudioTrackFeature TF_STEREO =
+      AudioTrackFeature._(0, _omitEnumNames ? '' : 'TF_STEREO');
+  static const AudioTrackFeature TF_NO_DTX =
+      AudioTrackFeature._(1, _omitEnumNames ? '' : 'TF_NO_DTX');
+  static const AudioTrackFeature TF_AUTO_GAIN_CONTROL =
+      AudioTrackFeature._(2, _omitEnumNames ? '' : 'TF_AUTO_GAIN_CONTROL');
+  static const AudioTrackFeature TF_ECHO_CANCELLATION =
+      AudioTrackFeature._(3, _omitEnumNames ? '' : 'TF_ECHO_CANCELLATION');
+  static const AudioTrackFeature TF_NOISE_SUPPRESSION =
+      AudioTrackFeature._(4, _omitEnumNames ? '' : 'TF_NOISE_SUPPRESSION');
+  static const AudioTrackFeature TF_ENHANCED_NOISE_CANCELLATION =
+      AudioTrackFeature._(
+          5, _omitEnumNames ? '' : 'TF_ENHANCED_NOISE_CANCELLATION');
+
+  static const $core.List<AudioTrackFeature> values = <AudioTrackFeature>[
+    TF_STEREO,
+    TF_NO_DTX,
+    TF_AUTO_GAIN_CONTROL,
+    TF_ECHO_CANCELLATION,
+    TF_NOISE_SUPPRESSION,
+    TF_ENHANCED_NOISE_CANCELLATION,
+  ];
+
+  static final $core.Map<$core.int, AudioTrackFeature> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static AudioTrackFeature? valueOf($core.int value) => _byValue[value];
+
+  const AudioTrackFeature._($core.int v, $core.String n) : super(v, n);
+}
+
 class ParticipantInfo_State extends $pb.ProtobufEnum {
   static const ParticipantInfo_State JOINING =
       ParticipantInfo_State._(0, _omitEnumNames ? '' : 'JOINING');
@@ -276,6 +334,33 @@ class ParticipantInfo_State extends $pb.ProtobufEnum {
   static ParticipantInfo_State? valueOf($core.int value) => _byValue[value];
 
   const ParticipantInfo_State._($core.int v, $core.String n) : super(v, n);
+}
+
+class ParticipantInfo_Kind extends $pb.ProtobufEnum {
+  static const ParticipantInfo_Kind STANDARD =
+      ParticipantInfo_Kind._(0, _omitEnumNames ? '' : 'STANDARD');
+  static const ParticipantInfo_Kind INGRESS =
+      ParticipantInfo_Kind._(1, _omitEnumNames ? '' : 'INGRESS');
+  static const ParticipantInfo_Kind EGRESS =
+      ParticipantInfo_Kind._(2, _omitEnumNames ? '' : 'EGRESS');
+  static const ParticipantInfo_Kind SIP =
+      ParticipantInfo_Kind._(3, _omitEnumNames ? '' : 'SIP');
+  static const ParticipantInfo_Kind AGENT =
+      ParticipantInfo_Kind._(4, _omitEnumNames ? '' : 'AGENT');
+
+  static const $core.List<ParticipantInfo_Kind> values = <ParticipantInfo_Kind>[
+    STANDARD,
+    INGRESS,
+    EGRESS,
+    SIP,
+    AGENT,
+  ];
+
+  static final $core.Map<$core.int, ParticipantInfo_Kind> _byValue =
+      $pb.ProtobufEnum.initByValue(values);
+  static ParticipantInfo_Kind? valueOf($core.int value) => _byValue[value];
+
+  const ParticipantInfo_Kind._($core.int v, $core.String n) : super(v, n);
 }
 
 class Encryption_Type extends $pb.ProtobufEnum {

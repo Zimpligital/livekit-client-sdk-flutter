@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 // limitations under the License.
 
 @Timeout(Duration(seconds: 5))
+library;
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -51,12 +52,12 @@ void main() {
       expect(
         room.events.streamCtrl.stream,
         emitsInOrder(<Matcher>[
+          predicate<ParticipantConnectedEvent>(
+            (event) => event.participant.sid == remoteParticipantData.sid,
+          ),
           predicate<TrackPublishedEvent>(
             (event) => event.participant.sid == remoteParticipantData.sid,
           ),
-          predicate<ParticipantConnectedEvent>(
-            (event) => event.participant.sid == remoteParticipantData.sid,
-          )
         ]),
       );
 
@@ -64,7 +65,7 @@ void main() {
 
       await room.events.waitFor<ParticipantConnectedEvent>(
           duration: const Duration(seconds: 1));
-      expect(room.participants.length, 1);
+      expect(room.remoteParticipants.length, 1);
     });
 
     test('participant disconnect', () async {
@@ -85,7 +86,7 @@ void main() {
 
       await room.events.waitFor<ParticipantDisconnectedEvent>(
           duration: const Duration(seconds: 1));
-      expect(room.participants.length, 0);
+      expect(room.remoteParticipants.length, 0);
     });
 
     test('participant metadata changed', () async {
@@ -143,8 +144,8 @@ void main() {
     test('leave', () async {
       expect(
           room.events.streamCtrl.stream,
-          emits(predicate<RoomDisconnectedEvent>((event) =>
-              room.connectionState == ConnectionState.disconnected)));
+          emits(predicate<RoomDisconnectedEvent>(
+              (event) => event.reason == DisconnectReason.unknown)));
       ws.onData(leaveResponse.writeToBuffer());
     });
   });

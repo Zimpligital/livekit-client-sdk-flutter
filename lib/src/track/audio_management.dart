@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright 2024 LiveKit, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -149,7 +149,8 @@ AudioTrackState _computeAudioTrackState() {
 Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
     AudioTrackState state) async {
   //
-  if (state == AudioTrackState.remoteOnly) {
+  if (state == AudioTrackState.remoteOnly &&
+      Hardware.instance.preferSpeakerOutput) {
     return NativeAudioConfiguration(
       appleAudioCategory: AppleAudioCategory.playAndRecord,
       appleAudioCategoryOptions: {
@@ -159,14 +160,17 @@ Future<NativeAudioConfiguration> defaultNativeAudioConfigurationFunc(
       appleAudioMode: AppleAudioMode.default_,
     );
   } else if ([
-    AudioTrackState.localOnly,
-    AudioTrackState.localAndRemote,
-  ].contains(state)) {
+        AudioTrackState.localOnly,
+        AudioTrackState.localAndRemote,
+      ].contains(state) ||
+      (state == AudioTrackState.remoteOnly &&
+          !Hardware.instance.preferSpeakerOutput)) {
     return NativeAudioConfiguration(
       appleAudioCategory: AppleAudioCategory.playAndRecord,
       appleAudioCategoryOptions: {
         AppleAudioCategoryOption.allowBluetooth,
-        AppleAudioCategoryOption.mixWithOthers,
+        AppleAudioCategoryOption.allowBluetoothA2DP,
+        AppleAudioCategoryOption.allowAirPlay,
       },
       appleAudioMode: Hardware.instance.preferSpeakerOutput
           ? AppleAudioMode.videoChat
