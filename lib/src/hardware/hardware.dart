@@ -35,10 +35,7 @@ class MediaDevice {
   bool operator ==(covariant MediaDevice other) {
     if (identical(this, other)) return true;
 
-    return other.deviceId == deviceId &&
-        other.kind == kind &&
-        other.label == label &&
-        other.groupId == groupId;
+    return other.deviceId == deviceId && other.kind == kind && other.label == label && other.groupId == groupId;
   }
 
   @override
@@ -56,19 +53,15 @@ class Hardware {
   Hardware._internal() {
     rtc.navigator.mediaDevices.ondevicechange = _onDeviceChange;
     enumerateDevices().then((devices) {
-      selectedAudioInput ??=
-          devices.firstWhereOrNull((element) => element.kind == 'audioinput');
-      selectedAudioOutput ??=
-          devices.firstWhereOrNull((element) => element.kind == 'audiooutput');
-      selectedVideoInput ??=
-          devices.firstWhereOrNull((element) => element.kind == 'videoinput');
+      selectedAudioInput ??= devices.firstWhereOrNull((element) => element.kind == 'audioinput');
+      selectedAudioOutput ??= devices.firstWhereOrNull((element) => element.kind == 'audiooutput');
+      selectedVideoInput ??= devices.firstWhereOrNull((element) => element.kind == 'videoinput');
     });
   }
 
   static final Hardware instance = Hardware._internal();
 
-  final StreamController<List<MediaDevice>> onDeviceChange =
-      StreamController.broadcast();
+  final StreamController<List<MediaDevice>> onDeviceChange = StreamController.broadcast();
 
   MediaDevice? selectedAudioInput;
 
@@ -82,9 +75,7 @@ class Hardware {
 
   Future<List<MediaDevice>> enumerateDevices({String? type}) async {
     var infos = await rtc.navigator.mediaDevices.enumerateDevices();
-    var devices = infos
-        .map((e) => MediaDevice(e.deviceId, e.label, e.kind!, e.groupId))
-        .toList();
+    var devices = infos.map((e) => MediaDevice(e.deviceId, e.label, e.kind!, e.groupId)).toList();
     if (type != null && type.isNotEmpty) {
       devices = devices.where((d) => d.kind == type).toList();
     }
@@ -104,18 +95,17 @@ class Hardware {
   }
 
   Future<void> selectAudioOutput(MediaDevice device) async {
-    if (!lkPlatformIsDesktop()) {
-      logger.warning('selectAudioOutput is only supported on Desktop');
-      return;
-    }
+    // if (!lkPlatformIsDesktop()) {
+    //   logger.warning('selectAudioOutput is only supported on Desktop');
+    //   return;
+    // }
     selectedAudioOutput = device;
     await rtc.Helper.selectAudioOutput(device.deviceId);
   }
 
   Future<void> selectAudioInput(MediaDevice device) async {
     if (lkPlatformIs(PlatformType.web)) {
-      logger.warning(
-          'selectAudioInput is only supported on Android/Windows/macOS');
+      logger.warning('selectAudioInput is only supported on Android/Windows/macOS');
       return;
     }
     selectedAudioInput = device;
@@ -134,8 +124,7 @@ class Hardware {
               AppleAudioCategoryOption.allowBluetooth,
               AppleAudioCategoryOption.mixWithOthers,
             },
-            appleAudioMode:
-            enable ? AppleAudioMode.videoChat : AppleAudioMode.voiceChat,
+            appleAudioMode: enable ? AppleAudioMode.videoChat : AppleAudioMode.voiceChat,
           );
           try {
             await Native.configureAudio(config);
@@ -153,10 +142,8 @@ class Hardware {
   bool get preferSpeakerOutput => _preferSpeakerOutput;
 
   bool get canSwitchSpeakerphone =>
-      ((lkPlatformIs(PlatformType.iOS) && !_preferSpeakerOutput) ||
-          lkPlatformIs(PlatformType.android)) &&
-      [AudioTrackState.localOnly, AudioTrackState.localAndRemote]
-          .contains(audioTrackState);
+      ((lkPlatformIs(PlatformType.iOS) && !_preferSpeakerOutput) || lkPlatformIs(PlatformType.android)) &&
+      [AudioTrackState.localOnly, AudioTrackState.localAndRemote].contains(audioTrackState);
 
   Future<void> setSpeakerphoneOn(bool enable) async {
     if (lkPlatformIsMobile()) {
@@ -171,8 +158,7 @@ class Hardware {
     }
   }
 
-  Future<rtc.MediaStream> openCamera(
-      {MediaDevice? device, bool? facingMode}) async {
+  Future<rtc.MediaStream> openCamera({MediaDevice? device, bool? facingMode}) async {
     var constraints = <String, dynamic>{
       if (facingMode != null) 'facingMode': facingMode ? 'user' : 'environment',
     };
@@ -194,12 +180,9 @@ class Hardware {
 
   dynamic _onDeviceChange(dynamic _) async {
     var devices = await enumerateDevices();
-    selectedAudioInput ??=
-        devices.firstWhereOrNull((element) => element.kind == 'audioinput');
-    selectedAudioOutput ??=
-        devices.firstWhereOrNull((element) => element.kind == 'audiooutput');
-    selectedVideoInput ??=
-        devices.firstWhereOrNull((element) => element.kind == 'videoinput');
+    selectedAudioInput ??= devices.firstWhereOrNull((element) => element.kind == 'audioinput');
+    selectedAudioOutput ??= devices.firstWhereOrNull((element) => element.kind == 'audiooutput');
+    selectedVideoInput ??= devices.firstWhereOrNull((element) => element.kind == 'videoinput');
     onDeviceChange.add(devices);
   }
 }
