@@ -87,7 +87,6 @@ class _RoomPageState extends State<RoomPage> {
           (timeStamp) => Navigator.popUntil(context, (route) => route.isFirst));
     })
     ..on<ParticipantEvent>((event) {
-      print('Participant event');
       // sort participants on many track events as noted in documentation linked above
       _sortParticipants();
     })
@@ -98,6 +97,9 @@ class _RoomPageState extends State<RoomPage> {
       print(
           'Attempting to reconnect ${event.attempt}/${event.maxAttemptsRetry}, '
           '(${event.nextRetryDelaysInMs}ms delay until next attempt)');
+    })
+    ..on<LocalTrackSubscribedEvent>((event) {
+      print('Local track subscribed: ${event.trackSid}');
     })
     ..on<LocalTrackPublishedEvent>((_) => _sortParticipants())
     ..on<LocalTrackUnpublishedEvent>((_) => _sortParticipants())
@@ -120,8 +122,8 @@ class _RoomPageState extends State<RoomPage> {
       String decoded = 'Failed to decode';
       try {
         decoded = utf8.decode(event.data);
-      } catch (_) {
-        print('Failed to decode: $_');
+      } catch (err) {
+        print('Failed to decode: $err');
       }
       context.showDataReceivedDialog(decoded);
     })

@@ -194,6 +194,9 @@ final roomOptions = RoomOptions(
 
 final room = Room();
 
+// you can use `prepareConnection` to speed up connection.
+await room.prepareConnection(url, token);
+
 await room.connect(url, token, roomOptions: roomOptions);
 
 try {
@@ -236,7 +239,7 @@ In our example, we use the `flutter_background` package to handle this. In the a
 </manifest>
 ```
 
-Before starting the background service and enabling screen share, you **must** call `Helper.requestCapturePermission()` from `flutter_webrtc`, and only proceed if it returns true.
+Before starting the background service and enabling screen share, you **must** call `Helper.requestCapturePermission()` from `flutter_webrtc`, and only proceed if it returns true. [Refer to our example implementation for details.](https://github.com/livekit/client-sdk-flutter/blob/c97fa769260a3fefd146c0ee61e2ce5c30ce2010/example/lib/widgets/controls.dart#L159)
 
 #### iOS
 

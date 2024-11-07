@@ -169,7 +169,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
             const androidConfig = FlutterBackgroundAndroidConfig(
               notificationTitle: 'Screen Sharing',
               notificationText: 'LiveKit Example is sharing the screen.',
-              notificationImportance: AndroidNotificationImportance.Default,
+              notificationImportance: AndroidNotificationImportance.normal,
               notificationIcon: AndroidResource(
                   name: 'livekit_ic_launcher', defType: 'mipmap'),
             );
@@ -312,6 +312,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
             else
               PopupMenuButton<MediaDevice>(
                 icon: const Icon(Icons.settings_voice),
+                offset: const Offset(0, -90),
                 itemBuilder: (BuildContext context) {
                   return [
                     PopupMenuItem<MediaDevice>(
@@ -354,7 +355,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
               icon: const Icon(Icons.mic_off),
               tooltip: 'un-mute audio',
             ),
-          if (!lkPlatformIs(PlatformType.iOS))
+          if (!lkPlatformIsMobile())
             PopupMenuButton<MediaDevice>(
               icon: const Icon(Icons.volume_up),
               itemBuilder: (BuildContext context) {
@@ -392,7 +393,7 @@ class _ControlsWidgetState extends State<ControlsWidget> {
                 ];
               },
             ),
-          if (!kIsWeb && lkPlatformIs(PlatformType.iOS))
+          if (!kIsWeb && lkPlatformIsMobile())
             IconButton(
               disabledColor: Colors.grey,
               onPressed: Hardware.instance.canSwitchSpeakerphone
