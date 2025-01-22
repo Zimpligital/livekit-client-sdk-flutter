@@ -85,18 +85,18 @@ class _VideoTrackRendererState extends State<VideoTrackRenderer> {
     await rtc.Helper.setZoom(videoTrack, zoomLevel);
   }
 
-  void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
-    final videoTrack = _renderer?.srcObject!.getVideoTracks().first;
-    if (videoTrack == null) return;
-
-    final point = Point<double>(
-      details.localPosition.dx / constraints.maxWidth,
-      details.localPosition.dy / constraints.maxHeight,
-    );
-
-    rtc.Helper.setFocusPoint(videoTrack, point);
-    rtc.Helper.setExposurePoint(videoTrack, point);
-  }
+  // void onViewFinderTap(TapDownDetails details, BoxConstraints constraints) {
+  //   final videoTrack = _renderer?.srcObject!.getVideoTracks().first;
+  //   if (videoTrack == null) return;
+  //
+  //   final point = Point<double>(
+  //     details.localPosition.dx / constraints.maxWidth,
+  //     details.localPosition.dy / constraints.maxHeight,
+  //   );
+  //
+  //   rtc.Helper.setFocusPoint(videoTrack, point);
+  //   rtc.Helper.setExposurePoint(videoTrack, point);
+  // }
 
   void disposeRenderer() {
     try {
@@ -228,8 +228,8 @@ class _VideoTrackRendererState extends State<VideoTrackRenderer> {
                         setZoom(details.scale);
                       }
                     },
-                    onTapDown: (TapDownDetails details) =>
-                        onViewFinderTap(details, constraints),
+                    // onTapDown: (TapDownDetails details) =>
+                    //     onViewFinderTap(details, constraints),
                     child: _videoRendererView(),
                   );
                 },
